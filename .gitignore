@@ -1,3 +1,4 @@
 dist/
 swarm_tasks.egg-info/
 build/
+*__pycache__*

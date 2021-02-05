@@ -1,0 +1,1 @@
+SWARM = [] #List of all robots
