@@ -44,6 +44,10 @@ class Simulation:
 					break
 
 			self.swarm.append(utils.robot.Bot(x,y,theta))
+		
+		for bot in self.swarm:
+			bot.set_sim(self)
+
 		return len(self.swarm)
 
 	
@@ -51,6 +55,10 @@ class Simulation:
 		"""
 		Checks if point (x,y) is free for
 		a robot to occupy
+
+		Returns: bool
+
+		ToDo: Check for obstacles in env
 		"""
 
 		for bot in self.swarm:

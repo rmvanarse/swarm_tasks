@@ -1,1 +1,2 @@
 import swarm_tasks.simulation.simulation
+import swarm_tasks.simulation.visualizer

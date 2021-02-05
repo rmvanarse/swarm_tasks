@@ -29,6 +29,8 @@ class Bot:
 		if(verbose):
 			print("New bot spawned at: ("+str(x)+','+str(y)+')')
 
+		self.sim = None #Reference to Simulation object that spawns the bot
+
 		#Add to sim?
 
 	
@@ -39,11 +41,19 @@ class Bot:
 		"""
 		return np.linalg.norm([x-self.x, y-self.y])
 
+	
+
+	def set_sim(self, sim):
+		self.sim = sim
+
 	def get_state(self):
 		return self.state
 
 	def get_pose(self):
 		return self.x, self.y, self.theta
+
+	def get_position(self):
+		return self.x, self.y
 
 
 
