@@ -2,6 +2,7 @@ from swarm_tasks.simulation.simulation import Simulation
 import swarm_tasks.envs as envs
 
 from matplotlib import pyplot as plt
+import numpy as np
 
 class Gui:
 	def __init__(self, sim):
@@ -22,6 +23,13 @@ class Gui:
 			x,y,theta = bot.get_pose()
 			circle = plt.Circle((x,y), bot.size, color='blue', fill=True)
 			self.fig.gca().add_artist(circle)
+			l=0.15
+
+			
+			self.ax.arrow(x,y, \
+				(bot.size-l)*np.cos(theta), (bot.size-l)*np.sin(theta), \
+				head_width=l, head_length=l, \
+				fc='k', ec='k')
 
 		plt.show()
 

@@ -40,7 +40,7 @@ class Simulation:
 				else:
 					print("Failed to initialize")
 
-				if self.check_free(x,y):
+				if self.check_free(x,y,utils.robot.DEFAULT_SIZE):
 					break
 
 			self.swarm.append(utils.robot.Bot(x,y,theta))
@@ -51,7 +51,7 @@ class Simulation:
 		return len(self.swarm)
 
 	
-	def check_free(self, x,y):
+	def check_free(self, x,y, r):
 		"""
 		Checks if point (x,y) is free for
 		a robot to occupy
@@ -60,19 +60,19 @@ class Simulation:
 
 		ToDo: Check for obstacles in env
 		"""
+		#Check for borders of simlation
+		if (x<r or x>(self.size[0]-r)):
+			return False
+		if (y<r or y>(self.size[1]-r)):
+			return False
 
+		#Check for obstacles in env
+
+
+		#Check for other bots
 		for bot in self.swarm:
-			#Check for borders of simlation
-			if (x<bot.size or x>self.size[0]-bot.size):
-				return False
-			if (y<bot.size or y>self.size[1]-bot.size):
-				return False
 
-			#Check for obstacles in env
-
-
-			#Check for other bots
-			if bot.dist(x,y) < bot.size:
+			if bot.dist(x,y) < 2*bot.size:
 				return False
 		return True
 
