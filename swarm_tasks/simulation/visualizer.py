@@ -31,7 +31,13 @@ class Gui:
 				head_width=l, head_length=l, \
 				fc='k', ec='k')
 
-		plt.show()
+		
 
 	def update(self):
-		pass
+		plt.show()
+
+	def show_neighbourhood(self, bot):
+		x,y = bot.get_position()
+		circle = plt.Circle((x,y), bot.neighbourhood_radius, color='red', fill=False)
+		self.fig.gca().add_artist(circle)
+		

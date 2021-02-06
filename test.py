@@ -9,3 +9,8 @@ s = sim.Simulation()
 gui = viz.Gui(s)
 
 gui.show_all()
+gui.show_neighbourhood(s.swarm[0])
+gui.update()
+
+#Print tests
+print(len(s.swarm[0].neighbours()))
