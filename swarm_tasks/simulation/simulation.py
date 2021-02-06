@@ -51,11 +51,15 @@ class Simulation:
 		return len(self.swarm)
 
 	
-	def check_free(self, x,y, r):
+	def check_free(self, x,y, r, ignore=None):
 		"""
 		Checks if point (x,y) is free for
 		a robot to occupy
-
+		Args:
+			x,y: Robot position
+			r: Robot radius
+			ignore: Robot to ignore 
+			(use ignore=self in Bot class to ignore collision with self)
 		Returns: bool
 
 		ToDo: Check for obstacles in env
@@ -71,7 +75,8 @@ class Simulation:
 
 		#Check for other bots
 		for bot in self.swarm:
-
+			if ignore == bot:
+				continue
 			if bot.dist(x,y) < 2*bot.size:
 				return False
 		return True

@@ -62,12 +62,16 @@ class Bot:
 		x_ = self.x + step_size*np.cos(self.theta)
 		y_ = self.y + step_size*np.sin(self.theta)
 
-		if True or self.sim.check_free(x_,y_):
+		if self.sim.check_free(x_,y_,self.size, ignore=self):
 			#check_free() will not work right now because
 			#a collision with oneself will be detected
 			self.x, self.y = x_,y_
 		else:
 			print("Collision!")
+
+	def turn(self, angle):
+		self.theta +=angle
+
 
 	def set_sim(self, sim):
 		self.sim = sim
