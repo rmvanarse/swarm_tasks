@@ -14,9 +14,12 @@ gui.show_all()
 gui.show_neighbourhood(s.swarm[0])
 
 #gui.animate(s.swarm[0].step, 200, 0.05)
-for i in range(20):
+for i in range(100):
 
-	s.swarm[0].step()
+	for b in s.swarm:
+		b.move(3.1, 1)
+	#s.swarm[0].step()
+	#s.swarm[2].step()
 	#s.swarm[0].turn(0.05)
 	gui.update()
 

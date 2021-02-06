@@ -2,6 +2,7 @@ import swarm_tasks.envs as envs
 import swarm_tasks.utils as utils
 
 import numpy as np
+from shapely.geometry import Point, Polygon
 
 DEFAULT_SIZE = (20,20)
 
@@ -76,6 +77,9 @@ class Simulation:
 			return False
 
 		#Check for obstacles in env
+		for obs in self.env.obstacles:
+			if obs.distance(Point(x,y))<=r:
+				return False
 
 
 		#Check for other bots
@@ -85,4 +89,5 @@ class Simulation:
 			if bot.dist(x,y) < 2*bot.size:
 				return False
 		return True
+
 

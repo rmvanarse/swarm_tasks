@@ -36,7 +36,7 @@ class Gui:
 	def show_env(self):
 		for obs in self.sim.env.obstacles:
 			x,y = obs.exterior.xy
-			self.ax.fill(x,y, fc='r', alpha=0.5)
+			self.ax.fill(x,y, fc='gray', alpha=1.0)
 
 	def update(self):
 		"""
@@ -45,7 +45,7 @@ class Gui:
 		"""
 		self.remove_artists()
 		self.show_all()
-		plt.pause(0.05)
+		plt.pause(0.0005)
 
 	def remove_artists(self):
 		for obj in self.ax.findobj(plt.Circle):
