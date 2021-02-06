@@ -8,13 +8,18 @@ DEFAULT_SIZE = (20,20)
 
 class Simulation:
 
-	def __init__(self, size=DEFAULT_SIZE,\
-		env=None,\
+	def __init__(self, \
+		env_name=None,\
 		num_bots=15,\
 		initialization='random'):
-	
-		self.size = size
-		self.env = None #envs.loader.load(env)
+		
+		if env_name==None:
+			self.env = envs.world.World()
+			print("Using default world")
+		else:
+			self.env = envs.world.World(filename=env_name+'.yaml')
+
+		self.size = self.env.size
 		self.swarm = []
 		self.num_bots = self.populate(num_bots, initialization)
 

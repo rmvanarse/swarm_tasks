@@ -33,7 +33,10 @@ class Gui:
 				head_width=l, head_length=l, \
 				fc='k', ec='k')
 
-	
+	def show_env(self):
+		for obs in self.sim.env.obstacles:
+			x,y = obs.exterior.xy
+			self.ax.fill(x,y, fc='r', alpha=0.5)
 
 	def update(self):
 		"""
@@ -57,15 +60,7 @@ class Gui:
 		circle = plt.Circle((x,y), bot.neighbourhood_radius, color='red', fill=False)
 		self.fig.gca().add_artist(circle)
 
-	
-	def animate(self, function, frames, interval):
-		"""
-		Runs an animation on plt that calls 'function'
-		Check from ld swarmbots repo
-		"""
-		anim = animation.FuncAnimation(self.fig, function, \
-			init_func=self.show_all, \
-			frames=frames, interval=interval, blit=True)
+
 
 	def run(self):
 		plt.show()
