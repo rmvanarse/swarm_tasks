@@ -10,7 +10,12 @@ gui = viz.Gui(s)
 
 gui.show_all()
 gui.show_neighbourhood(s.swarm[0])
-gui.update()
 
+#gui.animate(s.swarm[0].step, 200, 0.05)
+for i in range(100):
+
+	s.swarm[0].step()
+	gui.update()
+
+gui.run()
 #Print tests
-print(len(s.swarm[0].neighbours()))

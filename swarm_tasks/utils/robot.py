@@ -54,10 +54,20 @@ class Bot:
 			d = bot.dist(self.x, self.y)
 			if d>0 and d<self.neighbourhood_radius:
 				neighbours.append(bot)
-				
+
 		return neighbours
 
-	
+
+	def step(self, step_size=0.05):
+		x_ = self.x + step_size*np.cos(self.theta)
+		y_ = self.y + step_size*np.sin(self.theta)
+
+		if True or self.sim.check_free(x_,y_):
+			#check_free() will not work right now because
+			#a collision with oneself will be detected
+			self.x, self.y = x_,y_
+		else:
+			print("Collision!")
 
 	def set_sim(self, sim):
 		self.sim = sim
