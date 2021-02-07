@@ -22,13 +22,13 @@ class Cmd:
 	Output of the controller
 	"""
 	def __init__(self, vec=None, speed=1, dir_=None):
-		if vec!=None:
+		if len(vec)==2:
 			#Initialize using vector
 			if dir_!=None:
 				print("Vector suplied explicitly; Ignoring dir_...\n")
 			self.vec = np.array([vec[0], vec[1]])*speed
-			self.dir = np.arctan(np.divide(vec[1], vec[0]))
-			self.speed = np.norm(self.vec)
+			self.dir = np.arctan(np.divide(float(vec[1]), float(vec[0])+0.00001))
+			self.speed = np.linalg.norm(self.vec)
 		else:
 			#Initialize using direction and speed
 			self.speed = speed
