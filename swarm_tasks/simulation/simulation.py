@@ -25,6 +25,7 @@ class Simulation:
 		self.num_bots = self.populate(num_bots, initialization)
 
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
+		
 
 	def populate(self, n, initialization):
 		"""
@@ -68,7 +69,6 @@ class Simulation:
 			(use ignore=self in Bot class to ignore collision with self)
 		Returns: bool
 
-		ToDo: Check for obstacles in env
 		"""
 		#Check for borders of simlation
 		if (x<r or x>(self.size[0]-r)):
@@ -88,6 +88,7 @@ class Simulation:
 				continue
 			if bot.dist(x,y) < 2*bot.size:
 				return False
+		
 		return True
 
 

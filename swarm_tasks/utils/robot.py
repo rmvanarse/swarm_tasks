@@ -79,6 +79,12 @@ class Bot:
 			self.theta+=2*np.pi
 
 	def move(self, direction, speed, step_size=0.05):
+		"""
+		The robot moves one step in the given direction
+		The size of step os step_size*speed
+		The speed used is the minimum of speed param and self.max_speed
+		The bot does not start moving till the direction is within max_turn_speed
+		"""
 		turn_angle = direction-self.theta
 		while turn_angle>np.pi:
 			turn_angle-=2*np.pi
@@ -86,6 +92,7 @@ class Bot:
 			turn_angle+=2*np.pi
 
 		if np.abs(turn_angle)>self.max_turn_speed:
+			#If direction-theta is large, only turn without moving
 			self.turn(np.sign(turn_angle)*self.max_turn_speed)
 		else:
 			self.turn(turn_angle)
