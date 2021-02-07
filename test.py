@@ -8,6 +8,8 @@ import swarm_tasks.envs as envs
 import swarm_tasks.controllers as ctrl
 import swarm_tasks.controllers.potential_field as potf
 
+import numpy as np
+
 s = sim.Simulation(env_name='rectangles')
 gui = viz.Gui(s)
 
@@ -20,7 +22,8 @@ for i in range(100):
 
 	for b in s.swarm:
 		#b.move(3.1, 1)
-		#cmd = ctrl.command.Cmd(speed=1, dir_=1.7)
+		#cmd = ctrl.command.Cmd(speed=1, dir_=-2*i*np.pi/50)
+		#cmd = ctrl.command.Cmd([2*np.cos(2*i*np.pi/50),2*np.sin(2*i*np.pi/50)])
 		cmd = potf.get_field((b.get_position()),b.sim)
 		cmd.exec(b)
 	#s.swarm[0].step()

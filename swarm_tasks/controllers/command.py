@@ -21,13 +21,18 @@ class Cmd:
 	"""
 	Output of the controller
 	"""
-	def __init__(self, vec=None, speed=1, dir_=None):
+	def __init__(self, vec=[], speed=1, dir_=None):
 		if len(vec)==2:
 			#Initialize using vector
 			if dir_!=None:
 				print("Vector suplied explicitly; Ignoring dir_...\n")
 			self.vec = np.array([vec[0], vec[1]])*speed
-			self.dir = np.arctan(np.divide(float(vec[1]), float(vec[0])+0.00001))
+			self.dir = np.arctan(float(vec[1])/(float(vec[0])+0.00001))
+			
+			if vec[0] < 0:
+				self.dir += np.pi
+				#Needed because arctan codomain is [-pi/2,pi/2]
+				
 			self.speed = np.linalg.norm(self.vec)
 		else:
 			#Initialize using direction and speed
@@ -36,9 +41,9 @@ class Cmd:
 				dir_=0
 			self.dir = dir_
 
-			while self.dir<-np.pi:
+			while self.dir<=-np.pi:
 				self.dir+=2*np.pi
-			while self.dir>np.pi:
+			while self.dir>=np.pi:
 				self.dir-=2*np.pi
 
 			self.vec = np.array([np.cos(self.dir), np.sin(self.dir)])*self.speed

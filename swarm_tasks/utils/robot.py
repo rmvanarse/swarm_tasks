@@ -86,9 +86,9 @@ class Bot:
 		The bot does not start moving till the direction is within max_turn_speed
 		"""
 		turn_angle = direction-self.theta
-		while turn_angle>np.pi:
+		while turn_angle>=np.pi:
 			turn_angle-=2*np.pi
-		while turn_angle<-np.pi:
+		while turn_angle<=-np.pi:
 			turn_angle+=2*np.pi
 
 		if np.abs(turn_angle)>self.max_turn_speed:
