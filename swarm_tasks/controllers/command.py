@@ -1,5 +1,6 @@
 import numpy as np
 import swarm_tasks.simulation
+from swarm_tasks.utils import robot
 
 """
 (1)
@@ -41,6 +42,9 @@ class Cmd:
 				self.dir-=2*np.pi
 
 			self.vec = np.array([np.cos(self.dir), np.sin(self.dir)])*self.speed
+
+	def exec(self, bot):
+		bot.move(self.dir, self.speed)
 
 	def __add__(self, cmd):
 		return Cmd(self.vec + cmd.vec)
