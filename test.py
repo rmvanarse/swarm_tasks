@@ -18,13 +18,15 @@ gui.show_all()
 gui.show_neighbourhood(s.swarm[0])
 
 #gui.animate(s.swarm[0].step, 200, 0.05)
-for i in range(100):
-
+s.swarm[0].set_goal(6,1)
+#for i in range(300):
+while 1:
 	for b in s.swarm:
 		#b.move(3.1, 1)
 		#cmd = ctrl.command.Cmd(speed=1, dir_=-2*i*np.pi/50)
 		#cmd = ctrl.command.Cmd([2*np.cos(2*i*np.pi/50),2*np.sin(2*i*np.pi/50)])
-		cmd = potf.get_field((b.get_position()),b.sim)
+		#cmd = potf.get_field((b.get_position()),b.sim)
+		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		cmd.exec(b)
 	#s.swarm[0].step()
 	#s.swarm[2].step()

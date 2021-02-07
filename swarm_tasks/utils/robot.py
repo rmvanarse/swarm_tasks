@@ -33,6 +33,9 @@ class Bot:
 
 		self.sim = None #Reference to Simulation object that spawns the bot
 
+		self.goal_given = False
+		self.goal = [0,0]
+
 		#Add to sim?
 
 	
@@ -101,6 +104,18 @@ class Bot:
 
 	def set_sim(self, sim):
 		self.sim = sim
+
+	def set_goal(self, x, y):
+		self.goal = (x,y)
+		self.goal_given = True
+		#self.state=?
+
+	def cancel_goal(self):
+		self.goal_given = False
+
+	def goal_exists(self):
+		return self.goal_given
+
 
 	def get_state(self):
 		return self.state
