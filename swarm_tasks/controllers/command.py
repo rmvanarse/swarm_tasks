@@ -52,7 +52,7 @@ class Cmd:
 		bot.move(self.dir, self.speed)
 
 	def __add__(self, cmd):
-		return Cmd(self.vec + cmd.vec)
+		return Cmd((self.vec + cmd.vec).tolist())
 
 	def __mul__(self, k):
-		return Cmd(k*self.vec)
+		return Cmd((k*self.vec).tolist())

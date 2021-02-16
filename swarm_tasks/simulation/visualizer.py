@@ -17,21 +17,23 @@ class Gui:
 		self.ax.set_ylim([0, sim.size[1]])
 		self.ax.set_xlim([0, sim.size[0]])
 
-	def show_all(self):
-		#show env
+	def show_bots(self):
 
 		#show bots
 		for bot in self.sim.swarm:
+			self.show_neighbourhood(bot,3)
+
 			x,y,theta = bot.get_pose()
 			circle = plt.Circle((x,y), bot.size, color='blue', fill=True)
 			self.fig.gca().add_artist(circle)
-			
+
 
 			l=0.15
 			self.ax.arrow(x,y, \
 				(bot.size-l)*np.cos(theta), (bot.size-l)*np.sin(theta), \
 				head_width=l, head_length=l, \
 				fc='k', ec='k')
+
 
 	def show_env(self):
 		for obs in self.sim.env.obstacles:
@@ -44,7 +46,7 @@ class Gui:
 		Use animate instead
 		"""
 		self.remove_artists()
-		self.show_all()
+		self.show_bots()
 		plt.pause(0.0005)
 
 	def remove_artists(self):
@@ -55,13 +57,30 @@ class Gui:
 			obj.remove()
 
 
-	def show_neighbourhood(self, bot):
+	def show_neighbourhood(self, bot, r=None):
 		x,y = bot.get_position()
-		circle = plt.Circle((x,y), bot.neighbourhood_radius, color='red', fill=False)
-		self.fig.gca().add_artist(circle)
+		if r == None:
+			r = bot.neighbourhood_radius
+		circle2 = plt.Circle((x,y), r, color='red', fill=True, alpha=0.1)
+		circle1 = plt.Circle((x,y), r/2+bot.size, color='red', fill=True, alpha=0.1)
+		self.fig.gca().add_artist(circle1)
+		self.fig.gca().add_artist(circle2)
 
+
+	def show_grid(self, grid):
+		"""
+		Args:
+			grid: A 2D array of values from 0-1 
+		
+		TODO:
+		Plotting the grid as an image takes high computation
+		Plot in another format
+		"""
+
+		self.ax.imshow(grid, extent=[0, self.size[0], 0, self.size[1]])
+		#plt.draw()
 
 
 	def run(self):
-		plt.show()
+		plt.show(block=False)
 		
