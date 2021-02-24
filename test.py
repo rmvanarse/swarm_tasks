@@ -7,6 +7,7 @@ import swarm_tasks.utils as utils
 import swarm_tasks.envs as envs
 import swarm_tasks.controllers as ctrl
 import swarm_tasks.controllers.potential_field as potf
+import swarm_tasks.controllers.base_control as base_control
 
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 
@@ -38,7 +39,10 @@ while 1:
 		x,y = b.get_position()
 		grid[-int(y*50/s.size[0]), int(x*50/s.size[1])]=1
 		
-		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
+		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
+		cmd = base_control.base_control(b)
+		cmd+= base_control.obstacle_avoidance(b)
+
 		#cmd+=aggr_centroid(b)
 		cmd+=aggr_field(b)
 		cmd.exec(b)
