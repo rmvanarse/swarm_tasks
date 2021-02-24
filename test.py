@@ -11,10 +11,14 @@ import swarm_tasks.controllers.base_control as base_control
 
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 from swarm_tasks.modules.dispersion import disp_field
+from swarm_tasks.modules.formations import circle
 
 import numpy as np
 
+#s = sim.Simulation(env_name='empty_world')
 s = sim.Simulation(env_name='rectangles')
+
+
 gui = viz.Gui(s)
 
 gui.show_env()
@@ -29,7 +33,6 @@ grid = np.random.rand(50,50)
 
 iter_=0
 
-aggr_centroid(s.swarm[0])
 
 while 1:
 	for b in s.swarm:
@@ -43,8 +46,10 @@ while 1:
 		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		cmd = base_control.base_control(b)
 		cmd+= base_control.obstacle_avoidance(b)
-		cmd+= disp_field(b)
+		
+		cmd+=circle(b,5)
 
+		#cmd+= disp_field(b)
 		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
 		cmd.exec(b)
