@@ -10,6 +10,7 @@ import swarm_tasks.controllers.potential_field as potf
 import swarm_tasks.controllers.base_control as base_control
 
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
+from swarm_tasks.modules.dispersion import disp_field
 
 import numpy as np
 
@@ -42,9 +43,10 @@ while 1:
 		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		cmd = base_control.base_control(b)
 		cmd+= base_control.obstacle_avoidance(b)
+		cmd+= disp_field(b)
 
 		#cmd+=aggr_centroid(b)
-		cmd+=aggr_field(b)
+		#cmd+=aggr_field(b)
 		cmd.exec(b)
 
 	#if not iter_%100:
