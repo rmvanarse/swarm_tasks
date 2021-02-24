@@ -43,7 +43,7 @@ def get_field(point, sim, \
 		dir_vec = -np.array([p2.x-p1.x, p2.y-p1.y])
 		dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
 
-		field = field_weights['obstacles']/np.abs(np.power(r+0.001, order))
+		field = weights['obstacles']/np.abs(np.power(r+0.001, order))
 
 		vec+=field*dir_vec
 
@@ -60,7 +60,7 @@ def get_field(point, sim, \
 		dir_vec = -np.array([pos.x-p.x, pos.y-p.y])
 		dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
 
-		field = field_weights['bots']/np.abs(np.power(r+0.001, order))
+		field = weights['bots']/np.abs(np.power(r+0.001, order))
 
 		vec+=field*dir_vec
 
@@ -68,17 +68,17 @@ def get_field(point, sim, \
 	#X
 	if point[0] < max_dist:
 		r = point[0]
-		vec[0]+=field_weights['borders']/np.abs(np.power(r+0.001, order))
+		vec[0]+=weights['borders']/np.abs(np.power(r+0.001, order))
 	elif point[0] > sim.size[0]-max_dist:
 		r = sim.size[0]-point[0]
-		vec[0]-=field_weights['borders']/np.abs(np.power(r+0.001, order))
+		vec[0]-=weights['borders']/np.abs(np.power(r+0.001, order))
 	#Y
 	if point[1] < max_dist:
 		r = point[1]
-		vec[1]+=field_weights['borders']/np.abs(np.power(r+0.001, order))
+		vec[1]+=weights['borders']/np.abs(np.power(r+0.001, order))
 	elif point[1] > sim.size[1]-max_dist:
 		r = sim.size[1]-point[1]
-		vec[1]-=field_weights['borders']/np.abs(np.power(r+0.001, order))
+		vec[1]-=weights['borders']/np.abs(np.power(r+0.001, order))
 
 	#Goal
 	if goal_set:
@@ -86,8 +86,7 @@ def get_field(point, sim, \
 		if r>0.1:
 			dir_vec = -np.array([goal[0]-p.x, goal[1]-p.y])
 			dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
-			field = field_weights['goal']/np.abs(np.power(r+0.001, goal_order))
+			field = weights['goal']/np.abs(np.power(r+0.001, goal_order))
 			vec+=field*dir_vec
-
 
 	return cmd.Cmd(vec.tolist())		

@@ -31,3 +31,12 @@ def aggr_centroid(bot):
 	cmd = controllers.command.Cmd(dir_vec.tolist())
 
 	return cmd
+
+
+def aggr_field(bot, field_weights = {'bots':-3, 'obstacles':0, 'borders':0, 'goal':0}):
+	cmd = controllers.potential_field.get_field(bot.get_position(), \
+		bot.sim, weights=field_weights, \
+		order = 2, \
+		max_dist=bot.neighbourhood_radius)
+	
+	return cmd

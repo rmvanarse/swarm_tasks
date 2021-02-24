@@ -8,7 +8,7 @@ import swarm_tasks.envs as envs
 import swarm_tasks.controllers as ctrl
 import swarm_tasks.controllers.potential_field as potf
 
-from swarm_tasks.modules.aggregation import aggr_centroid
+from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 
 import numpy as np
 
@@ -39,7 +39,8 @@ while 1:
 		grid[-int(y*50/s.size[0]), int(x*50/s.size[1])]=1
 		
 		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
-		cmd+=aggr_centroid(b)
+		#cmd+=aggr_centroid(b)
+		cmd+=aggr_field(b)
 		cmd.exec(b)
 
 	#if not iter_%100:
