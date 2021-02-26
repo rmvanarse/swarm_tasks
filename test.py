@@ -12,6 +12,7 @@ import swarm_tasks.controllers.base_control as base_control
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 from swarm_tasks.modules.dispersion import disp_field
 from swarm_tasks.modules.formations import circle
+from swarm_tasks.modules import exploration as exp
 
 import numpy as np
 
@@ -44,18 +45,47 @@ while 1:
 		grid[-int(y*50/s.size[0]), int(x*50/s.size[1])]=1
 		
 		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
+		
+		"""
+		-------------
+		BASE
+		
+		"""
 		cmd = base_control.base_control(b)
 		cmd+= base_control.obstacle_avoidance(b)
 		
-		cmd+=circle(b,5)
+		"""
+		------------
+		#FORMATIONS
+		"""
+		#cmd+=circle(b,5)
+
+		"""
+		-------------
+		AGGR/DISP
+		"""
 
 		#cmd+= disp_field(b)
 		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
+		
+		"""
+		------------
+		EXPLORATION
+		"""
+		cmd += exp.explore(b)
+
+
+		"""
+		-------------
+		EXECUTE
+		"""
 		cmd.exec(b)
 
 	#if not iter_%100:
 		#gui.show_grid(grid)
+	
+
 	#s.swarm[0].step()
 	#s.swarm[2].step()
 	#s.swarm[0].turn(0.05)

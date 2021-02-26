@@ -33,8 +33,12 @@ class Bot:
 
 		self.sim = None #Reference to Simulation object that spawns the bot
 
+		#Goal (weight given to goal in potential field)
 		self.goal_given = False
 		self.goal = [0,0]
+
+		#For exploration
+		self.explore_dir = np.pi*(2*np.random.rand()-1)
 
 		#Add to sim?
 
@@ -125,6 +129,9 @@ class Bot:
 
 	def get_position(self):
 		return self.x, self.y
+
+	def get_dir(self):
+		return self.theta
 
 
 
