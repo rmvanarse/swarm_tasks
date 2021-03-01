@@ -1,6 +1,6 @@
 import numpy as np
 
-DEFAULT_NEIGHBOURHOOD_VAL = 6 #neighbourhood radius
+DEFAULT_NEIGHBOURHOOD_VAL = 4 #neighbourhood radius
 DEFAULT_SIZE = 0.5 #Radius of chassis
 MAX_SPEED = 1.5
 MAX_ANGULAR = 0.2
@@ -53,6 +53,10 @@ class Bot:
 	def neighbours(self):
 		"""
 		Returns the a list of neighbours
+
+		Enhancement:
+		(1) Variable nighbourhood radius
+		(2) Include self
 		"""
 		neighbours = []
 		if self.sim == None:

@@ -36,7 +36,6 @@ def circle(bot, radius):
 
 def line(bot):
 	"""
-	(**Trial basis**)
 	Performs linear regression among neighbours
 	Returns cmd towards (& perpendicular) to the line
 	"""
@@ -66,7 +65,7 @@ def line(bot):
 
 
 	m,c = np.linalg.lstsq(A,Y, rcond=None)[0]
-	print(m,c)
+	#print(m,c)
 
 	#Get direction of cmd
 	dir_ = np.arctan(-1/m)
