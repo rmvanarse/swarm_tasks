@@ -12,6 +12,7 @@ import swarm_tasks.controllers.base_control as base_control
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 from swarm_tasks.modules.dispersion import disp_field
 from swarm_tasks.modules.formations import circle
+from swarm_tasks.modules.formations import line	
 from swarm_tasks.modules import exploration as exp
 
 import numpy as np
@@ -59,7 +60,7 @@ while 1:
 		#FORMATIONS
 		"""
 		#cmd+=circle(b,5)
-
+		cmd+=line(b)
 		"""
 		-------------
 		AGGR/DISP
@@ -73,7 +74,7 @@ while 1:
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)
+		#cmd += exp.explore(b)
 
 
 		"""
