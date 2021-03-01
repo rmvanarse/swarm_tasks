@@ -32,3 +32,46 @@ def circle(bot, radius):
 	cmd = controllers.command.Cmd(dir_vec.tolist())
 
 	return cmd
+
+
+def line(bot):
+	"""
+	(**Trial basis**)
+	Performs linear regression among neighbours
+	Returns cmd towards (& perpendicular) to the line
+	"""
+	neighbours = bot.neighbours()
+	num_neighbours = len(neighbours)
+
+	if not num_neighbours:
+		"""
+		Enhancement:
+		Can define default behaviour for bots without neighbours
+		"""
+		return controllers.command.Cmd(speed=0, dir_=0)
+
+	X = []
+	Y = []
+	x0, y0 = bot.get_position()
+	#Find line y=mx+c
+	for n in neighbours:
+		x,y = n.get_position()
+		X.append(x)
+		Y.append(y)
+
+	X = np.asarray(X)
+	Y = np.asarray(Y)
+	C = np.ones(X.shape)
+	A = np.vstack([X,C]).T#.reshape(num_neighbours,2)
+
+
+	m,c = np.linalg.lstsq(A,Y, rcond=None)[0]
+	print(m,c)
+
+	#Get direction of cmd
+	dir_ = np.arctan(-1/m)
+	speed = -np.sign(m)*(m*x0 + c- y0)	;
+
+
+	cmd = controllers.command.Cmd(speed=speed, dir_=dir_) #temp
+	return cmd
