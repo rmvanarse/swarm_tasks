@@ -1,6 +1,6 @@
 import numpy as np
 
-DEFAULT_NEIGHBOURHOOD_VAL = 4 #neighbourhood radius
+DEFAULT_NEIGHBOURHOOD_VAL = 14 #neighbourhood radius
 DEFAULT_SIZE = 0.5 #Radius of chassis
 MAX_SPEED = 1.5
 MAX_ANGULAR = 0.2

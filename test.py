@@ -19,8 +19,8 @@ from swarm_tasks.modules import exploration as exp
 
 import numpy as np
 
-s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-#s = sim.Simulation(env_name='rectangles')
+#s = sim.Simulation(env_name='empty_world', contents_file='attractors')
+s = sim.Simulation(env_name='rectangles', contents_file='attractors')
 
 
 gui = viz.Gui(s)

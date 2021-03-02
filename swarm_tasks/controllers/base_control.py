@@ -18,7 +18,7 @@ def base_control(bot, \
 
 
 def obstacle_avoidance(bot, \
-			field_weights={'bots':1, 'obstacles':1, 'borders':1, 'goal':-3, 'items':0.005},\
+			field_weights={'bots':1, 'obstacles':1, 'borders':1, 'goal':-3, 'items':0.05},\
 			order=6, k=4):
 	"""
 	ToDo: Tuning
