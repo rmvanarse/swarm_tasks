@@ -12,17 +12,34 @@ class Simulation:
 	def __init__(self, \
 		env_name=None,\
 		num_bots=15,\
-		initialization='random'):
-		
+		initialization='random',\
+		contents_file=None):
+
+		#Load world into self.env
 		if env_name==None:
 			self.env = envs.world.World()
 			print("Using default world")
+
 		else:
 			self.env = envs.world.World(filename=env_name+'.yaml')
 
+
+		#Set simulation parameters based on world and robots
 		self.size = self.env.size
+		
+
+		#Load external items on top of env/world
+		if contents_file==None:
+			self.contents = envs.items.Contents()
+			print("No external items loaded")
+		else:
+			self.contents = env.items.Contents() #Add filename 
+
+		#Populate world with robots
 		self.swarm = []
 		self.num_bots = self.populate(num_bots, initialization)
+
+		
 
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
 		
@@ -80,6 +97,8 @@ class Simulation:
 		for obs in self.env.obstacles:
 			if obs.distance(Point(x,y))<=r:
 				return False
+
+		#Check for external items (TODO)
 
 
 		#Check for other bots
