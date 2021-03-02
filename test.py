@@ -13,12 +13,14 @@ from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 from swarm_tasks.modules.dispersion import disp_field
 from swarm_tasks.modules.formations import circle
 from swarm_tasks.modules.formations import line	
+
+from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.modules import exploration as exp
 
 import numpy as np
 
-#s = sim.Simulation(env_name='empty_world')
-s = sim.Simulation(env_name='rectangles')
+s = sim.Simulation(env_name='empty_world', contents_file='attractors')
+#s = sim.Simulation(env_name='rectangles')
 
 
 gui = viz.Gui(s)
@@ -60,7 +62,7 @@ while 1:
 		#FORMATIONS
 		"""
 		#cmd+=circle(b,5)
-		cmd+=line(b)
+		#cmd+=line(b)
 		"""
 		-------------
 		AGGR/DISP
@@ -69,6 +71,8 @@ while 1:
 		#cmd+= disp_field(b)
 		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
+
+		cmd+=surround_attractor(b)
 		
 		"""
 		------------

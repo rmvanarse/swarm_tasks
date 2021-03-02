@@ -7,14 +7,15 @@ from shapely.geometry import Point, Polygon
 from shapely.ops import nearest_points
 
 
-field_weights = {'bots':1, 'obstacles':1, 'borders':1, 'goal':-3}
+field_weights = {'bots':1, 'obstacles':1, 'borders':1, 'goal':-3, 'items':0}
 
 def get_field(point, sim, \
 	order=2, \
 	weights=field_weights, \
 	max_dist=2, \
 	goal_set = False, goal=None, \
-	goal_order = 0):
+	goal_order = 0,\
+	item_types = []):
 	"""
 	Args:
 		poiint: (x,y) tuple
@@ -24,6 +25,8 @@ def get_field(point, sim, \
 		max_dist: Max distance of objects (except goal) exerting a field
 		goal_set: Bool; whether a goal point has been given
 		goal: (x,y) tuple
+		goal_order:
+		item_types: List containing types of items that generate field 
 	Returns:
 		velocity vector as Cmd object
 	"""
@@ -88,5 +91,25 @@ def get_field(point, sim, \
 			dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
 			field = weights['goal']/np.abs(np.power(r+0.001, goal_order))
 			vec+=field*dir_vec
+
+
+	#Items
+	for o in sim.contents.items:
+		if not ((o.type in item_types) or ('all' in item_types)):
+			continue
+		p1,p2 = nearest_points(p,o.polygon)
+
+		r = p2.distance(p1)
+
+		if r>max_dist:
+			continue
+
+		dir_vec = -np.array([p2.x-p1.x, p2.y-p1.y])
+		dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
+
+		field = weights['items']/np.abs(np.power(r+0.001, order))
+
+		vec+=field*dir_vec
+
 
 	return cmd.Cmd(vec.tolist())		

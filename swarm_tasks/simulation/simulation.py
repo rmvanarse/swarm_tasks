@@ -99,7 +99,9 @@ class Simulation:
 				return False
 
 		#Check for external items (TODO)
-
+		for item in self.contents.items:
+			if item.polygon.distance(Point(x,y))<r:
+				return False
 
 		#Check for other bots
 		for bot in self.swarm:
