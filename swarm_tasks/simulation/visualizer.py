@@ -40,6 +40,12 @@ class Gui:
 			x,y = obs.exterior.xy
 			self.ax.fill(x,y, fc='gray', alpha=1.0)
 
+	def show_contents(self):
+		for item in self.sim.contents.items:
+			x,y = item.polygon.exterior.xy
+			self.ax.fill(x,y, fc='orange', alpha=0.8)
+	
+
 	def update(self):
 		"""
 		Not in use atm,
@@ -47,6 +53,7 @@ class Gui:
 		"""
 		self.remove_artists()
 		self.show_bots()
+		self.show_contents()
 		plt.pause(0.0005)
 
 	def remove_artists(self):

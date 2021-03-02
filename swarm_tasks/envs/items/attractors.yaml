@@ -1,0 +1,4 @@
+items:
+  i1:
+    poly: [[4,7], [6,8], [5,6]]
+    type: 'attractor'

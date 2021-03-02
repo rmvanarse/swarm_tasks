@@ -33,7 +33,7 @@ class Simulation:
 			self.contents = envs.items.Contents()
 			print("No external items loaded")
 		else:
-			self.contents = env.items.Contents() #Add filename 
+			self.contents = envs.items.Contents(filename = contents_file+'.yaml') #Add filename 
 
 		#Populate world with robots
 		self.swarm = []
