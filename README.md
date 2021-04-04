@@ -95,7 +95,7 @@ while(1):
 		
 	gui.update()
 ```	
-
+An example of all implemented behaviours can be found (commented) in the ```test.py``` file in the root folder. A more systematic ```Examples``` module will be created with version 1.0.0.
 
 ### Authors:
 **Rishikesh Vanarse** ( [GitHub](https://github.com/rmvanarse), [Website](https://rmvanarse.github.io) ) 
