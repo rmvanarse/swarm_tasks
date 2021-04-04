@@ -65,6 +65,7 @@ Submodules and functions can be imported similar to standard python packages. Fo
 
 The following are steps to initialize a basic swarm simulation (eg: Circle formation with obstacle avoidance):
 
+```python
 	import swarm_tasks
 
 	from swarm_tasks.simulation import simulation as sim
@@ -93,7 +94,7 @@ The following are steps to initialize a basic swarm simulation (eg: Circle forma
 			cmd.exec(b)
 			
 		gui.update()
-	
+```	
 
 
 ### Authors:
