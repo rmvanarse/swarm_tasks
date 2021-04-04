@@ -66,34 +66,34 @@ Submodules and functions can be imported similar to standard python packages. Fo
 The following are steps to initialize a basic swarm simulation (eg: Circle formation with obstacle avoidance):
 
 ```python
-	import swarm_tasks
+import swarm_tasks
 
-	from swarm_tasks.simulation import simulation as sim
-	from swarm_tasks.simulation import visualizer as viz
+from swarm_tasks.simulation import simulation as sim
+from swarm_tasks.simulation import visualizer as viz
 	
-	#Import required modules
-	import swarm_tasks.controllers.base_control as base_control
-	from swarm_tasks.modules.formations import circle
-	
-	
-	#Initialize Simulation and GUI 
-	s = sim.Simulation(env_name='rectangles')
-	gui = viz.Gui(s)
-	gui.show_env()
-	
-	while(1):
-		for b in s.swarm:
-			#Basic behaviours
-			cmd = base_control.base_control(b)
-			cmd+= base_control.obstacle_avoidance(b)
-			
-			#Additional behaviours
-			cmd+=circle(b,5)
-			
-			#Execute
-			cmd.exec(b)
-			
-		gui.update()
+#Import required modules
+import swarm_tasks.controllers.base_control as base_control
+from swarm_tasks.modules.formations import circle
+
+
+#Initialize Simulation and GUI 
+s = sim.Simulation(env_name='rectangles')
+gui = viz.Gui(s)
+gui.show_env()
+
+while(1):
+	for b in s.swarm:
+		#Basic behaviours
+		cmd = base_control.base_control(b)
+		cmd+= base_control.obstacle_avoidance(b)
+		
+		#Additional behaviours
+		cmd+=circle(b,5)
+		
+		#Execute
+		cmd.exec(b)
+		
+	gui.update()
 ```	
 
 
