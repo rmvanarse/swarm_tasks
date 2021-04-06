@@ -20,7 +20,7 @@ from swarm_tasks.modules import exploration as exp
 import numpy as np
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-s = sim.Simulation(env_name='rectangles')#, contents_file='attractors')
+s = sim.Simulation(num_bots=15, env_name='rectangles', contents_file='attractors')
 
 
 gui = viz.Gui(s)
@@ -29,7 +29,6 @@ gui.show_env()
 
 
 gui.show_bots()
-gui.show_neighbourhood(s.swarm[0])
 
 s.swarm[0].set_goal(6,1)
 grid = np.random.rand(50,50)
@@ -61,7 +60,7 @@ while 1:
 		------------
 		#FORMATIONS
 		"""
-		#cmd+=circle(b,5)
+		#cmd+=circle(b,4)
 		#cmd+=line(b)
 		"""
 		-------------
@@ -72,13 +71,14 @@ while 1:
 		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
 
+		#cmd+=aggr_field(b)*0.1
 		cmd+=surround_attractor(b)
 		
 		"""
 		------------
 		EXPLORATION
 		"""
-		#cmd += exp.explore(b)
+		cmd += exp.explore(b)
 
 
 		"""

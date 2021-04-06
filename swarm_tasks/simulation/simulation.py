@@ -2,6 +2,7 @@ import swarm_tasks.envs as envs
 import swarm_tasks.utils as utils
 
 import numpy as np
+import pandas as pd
 from shapely.geometry import Point, Polygon
 
 DEFAULT_SIZE = (20,20)
@@ -39,6 +40,8 @@ class Simulation:
 		self.swarm = []
 		self.num_bots = self.populate(num_bots, initialization)
 
+		#Other instance variables:
+		self.state_list = None
 		
 
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
@@ -111,5 +114,50 @@ class Simulation:
 				return False
 		
 		return True
+
+	
+	#FOR LOADED SIMULATIONS:
+	#The visualizer should work for loaded sims without modifications
+
+	def save_state(filename):
+		"""
+		Appends the state (x,y,theta) of each robot in the swarm
+		to a csv file (filename)
+		"""
+		return True
+
+	def save_sim(filename):
+		"""
+		Creates a yaml file (filename.yaml) with the simulation parameters
+		i.e. num_bots, size, obstacles file, items, states_file, etc.
+		Also creates an empty csv file (states_file) to save states
+
+		"""
+		return True
+
+	def load_sim(filename):
+		"""
+		Loads a simulation (env, items, etc.) from its yaml file
+		Loads the first state (if exists) from the corresponding csv file
+		Loads the state_list using sim.create)state_list
+		"""
+		return True
+
+	def load_state(state_array):
+		"""
+		Changes robot states to the states from the paramter array
+		"""
+		return True
+
+	def create_state_list(filename):
+		"""
+		Reads the csv file and creates a list of states
+		for the simulation to load one by one
+
+		Returns: Pandas dataframe
+		TODO: Can this be done better without a DF?
+		"""
+
+		return state_list
 
 

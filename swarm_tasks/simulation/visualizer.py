@@ -21,7 +21,7 @@ class Gui:
 
 		#show bots
 		for bot in self.sim.swarm:
-			self.show_neighbourhood(bot,3)
+			#self.show_neighbourhood(bot,3)
 
 			x,y,theta = bot.get_pose()
 			circle = plt.Circle((x,y), bot.size, color='blue', fill=True)
