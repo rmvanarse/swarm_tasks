@@ -52,7 +52,7 @@ class Bot:
 		"""
 		return np.linalg.norm([x-self.x, y-self.y])
 
-	def neighbours(self):
+	def neighbours(self, radius=None):
 		"""
 		Returns the a list of neighbours
 
@@ -60,6 +60,9 @@ class Bot:
 		(1) Variable nighbourhood radius
 		(2) Include self
 		"""
+		if radius == None:
+			radius = self.neighbourhood_radius
+		
 		neighbours = []
 		if self.sim == None:
 			print("WARNING: Robot is not linked to a simulation")
@@ -67,7 +70,7 @@ class Bot:
 
 		for bot in self.sim.swarm:
 			d = bot.dist(self.x, self.y)
-			if d>0 and d<self.neighbourhood_radius:
+			if d>0 and d<radius:
 				neighbours.append(bot)
 
 		return neighbours
