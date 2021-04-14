@@ -46,7 +46,7 @@ while 1:
 		x,y = b.get_position()
 		grid[-int(y*50/s.size[0]), int(x*50/s.size[1])]=1
 		
-		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
+		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		
 		"""
 		-------------
@@ -61,24 +61,24 @@ while 1:
 		#FORMATIONS
 		"""
 		#cmd+=circle(b,4)
-		#cmd+=line(b)
+		#cmd+=line(b)*3.5
 		"""
 		-------------
 		AGGR/DISP
 		"""
 
-		#cmd+= disp_field(b)
-		#cmd+=aggr_centroid(b)
+		cmd+= disp_field(b)*0.5
+		#cmd+=aggr_centroid(b)*0.15
 		#cmd+=aggr_field(b)
 
 		#cmd+=aggr_field(b)*0.1
-		cmd+=surround_attractor(b)
+		cmd+=surround_attractor(b)*2.5
 		
 		"""
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)
+		cmd += exp.explore(b)*0.75
 
 
 		"""

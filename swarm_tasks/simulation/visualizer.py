@@ -17,6 +17,8 @@ class Gui:
 		self.ax.set_ylim([0, sim.size[1]])
 		self.ax.set_xlim([0, sim.size[0]])
 
+		self.state_colors = ['blue','green','red','orange']
+
 	def show_bots(self):
 
 		#show bots
@@ -24,7 +26,8 @@ class Gui:
 			#self.show_neighbourhood(bot,3)
 
 			x,y,theta = bot.get_pose()
-			circle = plt.Circle((x,y), bot.size, color='blue', fill=True)
+			state_disp = (bot.get_state()<=len(self.state_colors))*(bot.get_state())
+			circle = plt.Circle((x,y), bot.size, color=self.state_colors[state_disp], fill=True)
 			self.fig.gca().add_artist(circle)
 
 

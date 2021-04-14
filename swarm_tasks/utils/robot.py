@@ -1,10 +1,10 @@
 import numpy as np
 
-DEFAULT_NEIGHBOURHOOD_VAL = 3 #neighbourhood radius
+DEFAULT_NEIGHBOURHOOD_VAL = 2 #neighbourhood radius
 DEFAULT_SIZE = 0.5 #Radius of chassis
 MAX_SPEED = 1.5
 MAX_ANGULAR = 0.2
-DEFAULT_STATE='stop'
+DEFAULT_STATE=0
 
 
 class Bot:
@@ -18,6 +18,8 @@ class Bot:
 		speed=MAX_SPEED, \
 		max_turn_speed=MAX_ANGULAR, \
 		verbose=False):
+
+		#TODO: Bot ID 
 
 		self.x = x
 		self.y = y
@@ -127,6 +129,9 @@ class Bot:
 
 	def get_state(self):
 		return self.state
+
+	def set_state(self, state):
+		self.state = state
 
 	def get_pose(self):
 		return self.x, self.y, self.theta

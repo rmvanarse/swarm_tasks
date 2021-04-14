@@ -4,7 +4,7 @@ import swarm_tasks.controllers as controllers
 import numpy as np
 
 
-def explore(bot, prob_switch = 0.01, speed=2):
+def explore(bot, prob_switch = 0.005, speed=2):
 	"""
 	ToDo:
 		-Bot State 
