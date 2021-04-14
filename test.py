@@ -17,6 +17,8 @@ from swarm_tasks.modules.formations import line
 from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.modules import exploration as exp
 
+from swarm_tasks.modules import decisions
+
 import numpy as np
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
@@ -72,13 +74,13 @@ while 1:
 		#cmd+=aggr_field(b)
 
 		#cmd+=aggr_field(b)*0.1
-		cmd+=surround_attractor(b)*2.5
+		#cmd+=surround_attractor(b)*2.5
 		
 		"""
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)*0.75
+		cmd += exp.explore(b)
 
 
 		"""
@@ -86,6 +88,13 @@ while 1:
 		EXECUTE
 		"""
 		cmd.exec(b)
+
+		"""
+		-------------
+		DECISIONS
+		"""
+		#decisions.switch_stoch(b,2, 0.001)
+		decisions.consensus(b)
 
 	#if not iter_%100:
 		#gui.show_grid(grid)

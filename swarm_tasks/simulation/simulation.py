@@ -3,6 +3,7 @@ import swarm_tasks.utils as utils
 
 import numpy as np
 import pandas as pd
+import random
 from shapely.geometry import Point, Polygon
 
 DEFAULT_SIZE = (20,20)
@@ -47,7 +48,7 @@ class Simulation:
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
 		
 
-	def populate(self, n, initialization):
+	def populate(self, n, initialization, num_states=2):
 		"""
 		Populates the simulation by spawning Bot objects
 		Args:
@@ -64,13 +65,15 @@ class Simulation:
 					x = np.random.rand()*self.size[0]
 					y = np.random.rand()*self.size[1]
 					theta = np.random.rand()*2*np.pi
+
+					state = random.randint(0,num_states-1)
 				else:
 					print("Failed to initialize")
 
 				if self.check_free(x,y,utils.robot.DEFAULT_SIZE):
 					break
 
-			self.swarm.append(utils.robot.Bot(x,y,theta))
+			self.swarm.append(utils.robot.Bot(x,y,theta, state=state))
 		
 		for bot in self.swarm:
 			bot.set_sim(self)
