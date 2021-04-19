@@ -19,6 +19,8 @@ class Gui:
 
 		self.state_colors = ['blue','green','red','orange']
 
+		self.grid_scatter = None
+
 	def show_bots(self):
 
 		#show bots
@@ -56,7 +58,9 @@ class Gui:
 		"""
 		self.remove_artists()
 		self.show_bots()
-		self.show_contents()
+		if self.sim.has_item_moved:
+			self.show_contents()
+			self.sim.has_item_moved = False
 		plt.pause(0.0005)
 
 	def remove_artists(self):
@@ -86,6 +90,9 @@ class Gui:
 		Plotting the grid as an image takes high computation
 		Plot in another format
 		"""
+		if self.grid_scatter != None:
+			self.grid_scatter.remove()
+
 		x_size, y_size = self.sim.size
 		x_labels = [i +0.5 for i in range(x_size)]*y_size
 		y_labels = [int(i/x_size)+0.5 for i in range(y_size*x_size)]
@@ -93,14 +100,14 @@ class Gui:
 		grid_1d = self.sim.grid.ravel()
 		#grid_1d[20:40] = True	#debug
 
-		col = ['g' if i else 'r' for i in grid_1d]
+		col = ['b' if i else 'gray' for i in grid_1d]
 
 
 		if len(col) != len(x_labels) or len(x_labels) != len(y_labels):
 			print("ERROR: Grid shape mismatch")
 			return False
 
-		self.ax.scatter(x_labels, y_labels, c=col)
+		self.grid_scatter = self.ax.scatter(x_labels, y_labels, c=col)
 		#plt.draw()
 
 

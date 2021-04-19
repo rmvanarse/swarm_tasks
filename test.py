@@ -46,9 +46,11 @@ while 1:
 		#cmd = ctrl.command.Cmd([2*np.cos(2*i*np.pi/50),2*np.sin(2*i*np.pi/50)])
 		#cmd = potf.get_field((b.get_position()),b.sim)
 		x,y = b.get_position()
-		
+
+
 		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		
+
 		"""
 		-------------
 		BASE
@@ -102,6 +104,8 @@ while 1:
 	#s.swarm[0].step()
 	#s.swarm[2].step()
 	#s.swarm[0].turn(0.05)
+	s.update_grid()
+	gui.show_grid()
 	gui.update()
 
 

@@ -37,6 +37,9 @@ class Simulation:
 		else:
 			self.contents = envs.items.Contents(filename = contents_file+'.yaml') #Add filename 
 
+		self.has_item_moved = True #(Used to decide whether to update polygons in viz)
+		
+
 		#Grid
 		self.grid = np.zeros(self.env.size, dtype=bool)	#Default grid
 
@@ -126,6 +129,21 @@ class Simulation:
 	def create_custom_grid(self, size, _type='bool'):
 		self.grid = np.zeros(size, dtype=_type)
 		return True
+
+	def update_grid(self, r=1, new_val=True):
+		"""
+		Updates grid values in areas of radius r around all bots
+		(For area coverage) 
+		The value cahnges to new_val
+
+		Returns the fraction of True values for info
+		"""
+		for bot in self.swarm:
+			x,y = bot.get_position()
+			self.grid[max(0,int(y-r)):min(int(y+r+1),self.grid.shape[0]),\
+			max(0,int(x-r)):min(int(x+r+1),self.grid.shape[1])] = True
+		
+		return np.sum(self.grid)/(self.grid.size)
 
 
 	#FOR LOADED SIMULATIONS:
