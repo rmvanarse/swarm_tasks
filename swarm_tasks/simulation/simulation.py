@@ -37,6 +37,10 @@ class Simulation:
 		else:
 			self.contents = envs.items.Contents(filename = contents_file+'.yaml') #Add filename 
 
+		#Grid
+		self.grid = np.zeros(self.env.size, dtype=bool)	#Default grid
+
+
 		#Populate world with robots
 		self.swarm = []
 		self.num_bots = self.populate(num_bots, initialization)
@@ -119,6 +123,11 @@ class Simulation:
 		return True
 
 	
+	def create_custom_grid(self, size, _type='bool'):
+		self.grid = np.zeros(size, dtype=_type)
+		return True
+
+
 	#FOR LOADED SIMULATIONS:
 	#The visualizer should work for loaded sims without modifications
 

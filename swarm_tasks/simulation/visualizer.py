@@ -77,7 +77,7 @@ class Gui:
 		self.fig.gca().add_artist(circle2)
 
 
-	def show_grid(self, grid):
+	def show_grid(self):
 		"""
 		Args:
 			grid: A 2D array of values from 0-1 
@@ -86,8 +86,21 @@ class Gui:
 		Plotting the grid as an image takes high computation
 		Plot in another format
 		"""
+		x_size, y_size = self.sim.size
+		x_labels = [i +0.5 for i in range(x_size)]*y_size
+		y_labels = [int(i/x_size)+0.5 for i in range(y_size*x_size)]
+		
+		grid_1d = self.sim.grid.ravel()
+		#grid_1d[20:40] = True	#debug
 
-		self.ax.imshow(grid, extent=[0, self.size[0], 0, self.size[1]])
+		col = ['g' if i else 'r' for i in grid_1d]
+
+
+		if len(col) != len(x_labels) or len(x_labels) != len(y_labels):
+			print("ERROR: Grid shape mismatch")
+			return False
+
+		self.ax.scatter(x_labels, y_labels, c=col)
 		#plt.draw()
 
 

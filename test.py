@@ -33,8 +33,8 @@ gui.show_env()
 gui.show_bots()
 
 s.swarm[0].set_goal(6,1)
-grid = np.random.rand(50,50)
-#gui.show_grid(np.random.randn(50,50)>0.5)
+#grid = np.random.rand(50,50)
+gui.show_grid()
 
 iter_=0
 
@@ -46,7 +46,6 @@ while 1:
 		#cmd = ctrl.command.Cmd([2*np.cos(2*i*np.pi/50),2*np.sin(2*i*np.pi/50)])
 		#cmd = potf.get_field((b.get_position()),b.sim)
 		x,y = b.get_position()
-		grid[-int(y*50/s.size[0]), int(x*50/s.size[1])]=1
 		
 		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		
