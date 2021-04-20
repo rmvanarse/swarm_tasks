@@ -5,10 +5,11 @@ import swarm_tasks.controllers.potential_field as potf
 
 def surround_attractor(bot, \
 			field_weights={'bots':0, 'obstacles':0, 'borders':0, 'goal':0, 'items':-4},\
-			order=-1):
+			order=1):
 	"""
 	Surrounds an attractor item within the neighbourhood radius
 	ToDo: Tuning
+	Order = 1 is default because the nearest attractor should be given priority
 	"""
 	cmd = potf.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \

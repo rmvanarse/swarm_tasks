@@ -11,7 +11,7 @@ from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.tasks import area_coverage as cvg
 
 
-PERIMETER_NEIGHBOURHOOD_RADIUS = 5
+PERIMETER_NEIGHBOURHOOD_RADIUS = 4
 
 STATE_SEARCH = 0
 STATE_PERIMETER = 1
@@ -55,7 +55,7 @@ def remove_contamination(bot, use_base_control=True,\
 
 	if bot.state==STATE_RUSH:
 		cmd =surround_attractor(bot) #Goes slow in hopes of being seen
-		cmd += base_control.obstacle_avoidance(bot)	#Extra obst. avoidance (tuning)
+		cmd += base_control.base_control(bot)	#Extra obst. avoidance (tuning)
 
 	if bot.state ==STATE_PERIMETER:
 		cmd =surround_attractor(bot)*surround_weight
@@ -63,7 +63,7 @@ def remove_contamination(bot, use_base_control=True,\
 
 	#Add base control if needed
 	if(use_base_control):
-		cmd += base_control.base_control(bot)
+		cmd += base_control.base_control(bot)*0.5
 		cmd += base_control.obstacle_avoidance(bot)
 
 

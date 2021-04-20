@@ -1,7 +1,7 @@
 import numpy as np
 
 DEFAULT_NEIGHBOURHOOD_VAL = 6 #neighbourhood radius
-DEFAULT_SIZE = 0.5 #Radius of chassis
+DEFAULT_SIZE = 0.4 #Radius of chassis
 MAX_SPEED = 1.5
 MAX_ANGULAR = 0.2
 DEFAULT_STATE=0
@@ -89,7 +89,7 @@ class Bot:
 		x_ = self.x + step_size*np.cos(self.theta)
 		y_ = self.y + step_size*np.sin(self.theta)
 
-		if self.sim.check_free(x_,y_,self.size, ignore=self):
+		if self.sim.check_free(x_,y_,self.size-0.01, ignore=self):
 			self.x, self.y = x_,y_
 		else:
 			print("Collision!")
