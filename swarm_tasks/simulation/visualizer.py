@@ -21,6 +21,9 @@ class Gui:
 
 		self.grid_scatter = None
 
+		#Contents list (used in remove_artists())
+		self.content_fills = []
+
 	def show_bots(self):
 
 		#show bots
@@ -48,7 +51,8 @@ class Gui:
 	def show_contents(self):
 		for item in self.sim.contents.items:
 			x,y = item.polygon.exterior.xy
-			self.ax.fill(x,y, fc='orange', alpha=0.9)
+			f =self.ax.fill(x,y, fc='orange', alpha=0.9)
+			self.content_fills.append((x,y))
 	
 
 	def update(self):
@@ -69,6 +73,9 @@ class Gui:
 
 		for obj in self.ax.findobj(patches.FancyArrow):
 			obj.remove()
+
+		for ext in self.content_fills:
+			self.ax.fill(*ext, fc='w')
 
 
 	def show_neighbourhood(self, bot, r=None):

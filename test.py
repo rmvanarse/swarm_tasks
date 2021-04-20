@@ -22,7 +22,9 @@ from swarm_tasks.modules import decisions
 import numpy as np
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-s = sim.Simulation(env_name='rectangles', contents_file='clutter')
+#s = sim.Simulation(env_name='rectangles', contents_file='clutter')
+s = sim.Simulation(env_name='rectangles')
+
 #s = sim.Simulation(num_bots=15, env_name='rectangles', contents_file='attractors',\
 #	num_initial_states =2)
 
