@@ -26,7 +26,7 @@ def contaminations(sim, prob_new=0.000001):
 	for c in sim.contents.items:
 		if c.subtype != 'contamination':
 			continue
-		c.update(1-sim_tests.num_bots_around_item(sim, c, 1))
+		c.update(3-sim_tests.num_bots_around_item(sim, c, 1))
 		if c.radius < 0.4:
 			sim.contents.items.remove(c)
 			print("ITEM REMOVED\nNum items: ", len(sim.contents.items))

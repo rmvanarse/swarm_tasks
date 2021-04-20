@@ -23,6 +23,7 @@ class Gui:
 
 		#Contents list (used in remove_artists())
 		self.content_fills = []
+		self.limits = ([0,0,self.size[0], self.size[0]], [0,self.size[1], self.size[1],0])
 
 	def show_bots(self):
 
@@ -51,19 +52,26 @@ class Gui:
 	def show_contents(self):
 		for item in self.sim.contents.items:
 			x,y = item.polygon.exterior.xy
-			f =self.ax.fill(x,y, fc='orange', alpha=0.9)
-			self.content_fills.append((x,y))
+			if item.subtype == 'contamination':
+				self.ax.fill(x,y, fc='red', alpha=0.5)
+				continue
+			self.ax.fill(x,y, fc='orange', alpha=0.9)
+			#self.content_fills.append((x,y))
 	
 
 	def update(self):
 		"""
-		Not in use atm,
-		Use animate instead
+
 		"""
 		self.remove_artists()
 		self.show_bots()
 		if self.sim.has_item_moved:
+			#for ext in self.content_fills:
+				#self.ax.fill(*ext, fc='w')
+			#self.content_fills=[]
+			#self.ax.fill(*self.limits, 'w')
 			self.show_contents()
+			self.show_env()
 			self.sim.has_item_moved = False
 		plt.pause(0.0005)
 
@@ -73,9 +81,9 @@ class Gui:
 
 		for obj in self.ax.findobj(patches.FancyArrow):
 			obj.remove()
-
-		for ext in self.content_fills:
-			self.ax.fill(*ext, fc='w')
+		
+		for obj in self.ax.findobj(patches.Polygon):
+			obj.remove()
 
 
 	def show_neighbourhood(self, bot, r=None):

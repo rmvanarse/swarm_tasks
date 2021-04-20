@@ -62,7 +62,7 @@ class Bot:
 		"""
 		if radius == None:
 			radius = self.neighbourhood_radius
-		
+
 		neighbours = []
 		if self.sim == None:
 			print("WARNING: Robot is not linked to a simulation")
@@ -81,8 +81,6 @@ class Bot:
 		y_ = self.y + step_size*np.sin(self.theta)
 
 		if self.sim.check_free(x_,y_,self.size, ignore=self):
-			#check_free() will not work right now because
-			#a collision with oneself will be detected
 			self.x, self.y = x_,y_
 		else:
 			print("Collision!")

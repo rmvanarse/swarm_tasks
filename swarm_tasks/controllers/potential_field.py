@@ -105,7 +105,7 @@ def get_field(point, sim, \
 			continue
 
 		dir_vec = -np.array([p2.x-p1.x, p2.y-p1.y])
-		dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec))
+		dir_vec = np.divide(dir_vec, np.linalg.norm(dir_vec+0.001))
 
 		field = weights['items']/np.abs(np.power(r+0.001, order))
 
