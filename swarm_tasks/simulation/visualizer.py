@@ -100,7 +100,7 @@ class Gui:
 		grid_1d = self.sim.grid.ravel()
 		#grid_1d[20:40] = True	#debug
 
-		col = ['b' if i else 'gray' for i in grid_1d]
+		col = ['green' if i else 'yellow' for i in grid_1d]
 
 
 		if len(col) != len(x_labels) or len(x_labels) != len(y_labels):

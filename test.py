@@ -36,7 +36,7 @@ s.swarm[0].set_goal(6,1)
 #grid = np.random.rand(50,50)
 gui.show_grid()
 
-iter_=0
+i=0
 
 
 while 1:
@@ -70,7 +70,7 @@ while 1:
 		AGGR/DISP
 		"""
 
-		cmd+= disp_field(b)*0.5
+		cmd+= disp_field(b)*(0.5+1/(i*0.001+1))
 		#cmd+=aggr_centroid(b)*0.15
 		#cmd+=aggr_field(b)
 
@@ -81,7 +81,7 @@ while 1:
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)
+		cmd += exp.explore(b)*(min(1, 0.001*i))
 
 
 		"""
@@ -107,6 +107,8 @@ while 1:
 	s.update_grid()
 	gui.show_grid()
 	gui.update()
+	s.time_elapsed+=1
+	i+=1
 
 
 gui.run()

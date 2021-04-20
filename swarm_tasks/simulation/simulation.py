@@ -49,6 +49,7 @@ class Simulation:
 		self.num_bots = self.populate(num_bots, initialization)
 
 		#Other instance variables:
+		self.time_elapsed = 0	#Number of iterations
 		self.state_list = None
 		
 
