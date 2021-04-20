@@ -6,6 +6,8 @@ from swarm_tasks.modules import exploration as exp
 
 from swarm_tasks.utils.weight_functions import linear_trunc, hyperbolic
 
+NEIGHBOURHOOD_RADIUS = 4
+
 
 def disp_exp_area_cvg(bot, use_base_control=True,\
 					disp_weight_function = hyperbolic,\
@@ -37,7 +39,8 @@ def disp_exp_area_cvg(bot, use_base_control=True,\
 	weight_disp = disp_weight_function(t, *disp_weight_params)
 	weight_exp = exp_weight_function(t, *exp_weight_params)
 	
-	cmd = disp_field(bot)*weight_disp + exp.explore(bot)*weight_exp
+	cmd = disp_field(bot, neighbourhood_radius = NEIGHBOURHOOD_RADIUS)*weight_disp
+	cmd += exp.explore(bot)*weight_exp
 	
 
 	#Add base control if needed

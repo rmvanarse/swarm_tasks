@@ -82,8 +82,9 @@ class Gui:
 		for obj in self.ax.findobj(patches.FancyArrow):
 			obj.remove()
 		
-		for obj in self.ax.findobj(patches.Polygon):
-			obj.remove()
+		if self.sim.has_item_moved:
+			for obj in self.ax.findobj(patches.Polygon):
+				obj.remove()
 
 
 	def show_neighbourhood(self, bot, r=None):

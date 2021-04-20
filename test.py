@@ -36,7 +36,7 @@ gui.show_env()
 
 gui.show_bots()
 
-s.swarm[0].set_goal(6,1)
+#s.swarm[0].set_goal(6,1)
 #grid = np.random.rand(50,50)
 gui.show_grid()
 

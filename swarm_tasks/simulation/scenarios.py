@@ -10,12 +10,12 @@ import swarm_tasks.utils.item as ex
 import numpy as np
 
 
-def contaminations(sim, prob_new=0.000001):
+def contaminations(sim, prob_new=0.0001):
 	#Rand for new contamination
 	rand_ = np.random.rand()
 
 	#Create new contamination
-	if not len(sim.contents.items) or rand_ < prob_new:
+	if ((not len(sim.contents.items) )and sim.time_elapsed<10) or rand_ < prob_new:
 		pos = np.random.rand(2)*sim.size
 		while not sim.check_free(*pos, 1.0):
 			pos = np.random.rand(2)*sim.size

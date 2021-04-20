@@ -3,13 +3,14 @@ import swarm_tasks.controllers as controllers
 
 import numpy as np
 
-def consensus(bot, include_self=True):
+def consensus(bot, include_self=True,\
+			neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
 	"""
 	The bot changes its state to the majority state
 	in its neighbourhood
 	Returns true if the state is switched
 	"""
-	neighbours = bot.neighbours()
+	neighbours = bot.neighbours(neighbourhood_radius)
 	if include_self:
 		neighbours.append(bot)
 

@@ -32,7 +32,7 @@ while 1:
 		cmd+=surround_attractor(b)*2.5
 		cmd.exec(b)
 
-		scenarios.contaminations(s)
+	scenarios.contaminations(s)
 
 	#s.update_grid()
 	#gui.show_grid()

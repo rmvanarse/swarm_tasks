@@ -3,8 +3,9 @@ import swarm_tasks.controllers as controllers
 
 import numpy as np
 
-def circle(bot, radius):
-	neighbours = bot.neighbours()
+def circle(bot, radius,\
+		neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
+	neighbours = bot.neighbours(neighbourhood_radius)
 	num_neighbours = len(neighbours)
 	
 	if not num_neighbours:
@@ -34,12 +35,12 @@ def circle(bot, radius):
 	return cmd
 
 
-def line(bot):
+def line(bot, neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
 	"""
 	Performs linear regression among neighbours
 	Returns cmd towards (& perpendicular) to the line
 	"""
-	neighbours = bot.neighbours()
+	neighbours = bot.neighbours(neighbourhood_radius)
 	num_neighbours = len(neighbours)
 
 	if not num_neighbours:
