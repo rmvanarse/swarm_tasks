@@ -13,6 +13,7 @@ import swarm_tasks.controllers.base_control as base_control
 
 from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.tasks import area_coverage as cvg
+from swarm_tasks.tasks import remove_contamination as remcon
 
 import numpy as np
 
@@ -28,8 +29,7 @@ gui.show_bots()
 while 1:
 	for b in s.swarm:
 
-		cmd = cvg.disp_exp_area_cvg(b)
-		cmd+=surround_attractor(b)*2.5
+		cmd = remcon.remove_contamination(b)
 		cmd.exec(b)
 
 	scenarios.contaminations(s)

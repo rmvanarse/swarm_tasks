@@ -52,12 +52,13 @@ class Bot:
 		"""
 		return np.linalg.norm([x-self.x, y-self.y])
 
-	def neighbours(self, radius=None):
+	def neighbours(self, radius=None, single_state=False, state=None):
 		"""
 		Returns the a list of neighbours
 
+		If sengle_state is true, then return only neighbours of the given state
+
 		Enhancement:
-		(1) Variable nighbourhood radius
 		(2) Include self
 		"""
 		if radius == None:
@@ -69,7 +70,15 @@ class Bot:
 			return neighbours
 
 		for bot in self.sim.swarm:
+			#Skip if a single state is needed
+			if single_state:
+				if bot.state != state:
+					continue
+			
+			#Get distance to bot
 			d = bot.dist(self.x, self.y)
+			
+			#Check if neighbour
 			if d>0 and d<radius:
 				neighbours.append(bot)
 
