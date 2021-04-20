@@ -43,12 +43,12 @@ class Gui:
 	def show_env(self):
 		for obs in self.sim.env.obstacles:
 			x,y = obs.exterior.xy
-			self.ax.fill(x,y, fc='gray', alpha=1.0)
+			self.ax.fill(x,y, fc='gray', alpha=0.9)
 
 	def show_contents(self):
 		for item in self.sim.contents.items:
 			x,y = item.polygon.exterior.xy
-			self.ax.fill(x,y, fc='orange', alpha=0.8)
+			self.ax.fill(x,y, fc='orange', alpha=0.9)
 	
 
 	def update(self):

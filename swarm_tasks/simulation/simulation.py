@@ -15,6 +15,7 @@ class Simulation:
 		env_name=None,\
 		num_bots=15,\
 		initialization='random',\
+		num_initial_states = 1,\
 		contents_file=None):
 
 		#Load world into self.env
@@ -46,7 +47,8 @@ class Simulation:
 
 		#Populate world with robots
 		self.swarm = []
-		self.num_bots = self.populate(num_bots, initialization)
+		self.num_initial_states = num_initial_states
+		self.num_bots = self.populate(num_bots, initialization, self.num_initial_states)
 
 		#Other instance variables:
 		self.time_elapsed = 0	#Number of iterations
@@ -56,7 +58,7 @@ class Simulation:
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
 		
 
-	def populate(self, n, initialization, num_states=2):
+	def populate(self, n, initialization, num_states):
 		"""
 		Populates the simulation by spawning Bot objects
 		Args:
