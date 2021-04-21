@@ -21,7 +21,8 @@ STATE_RUSH = 3
 def remove_contamination(bot, use_base_control=True,\
 						surround_weight = 2.5,\
 						search_weight = 2.0,\
-						thresh_dist = 0.25):
+						thresh_dist = 0.25,\
+						use_follow_state=True):
 
 	#If item is in contact or item is seen, change state
 	flag=False
@@ -59,7 +60,8 @@ def remove_contamination(bot, use_base_control=True,\
 		
 		if len(neighbours_rush)>0:
 			cmd+= follow_leader(bot, neighbours_rush[0])*3
-			bot.set_state(STATE_FOLLOW) #DEBUG
+			if use_follow_state:
+				bot.set_state(STATE_FOLLOW) #DEBUG
 		
 		elif len(neighbours_follow)>0:
 			cmd+= follow_leader(bot, neighbours_follow[0])*3

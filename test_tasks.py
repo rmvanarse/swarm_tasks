@@ -29,10 +29,10 @@ gui.show_bots()
 while 1:
 	for b in s.swarm:
 
-		cmd = remcon.remove_contamination(b)
+		cmd = remcon.remove_contamination(b, use_follow_state = False)
 		cmd.exec(b)
 
-	scenarios.contaminations(s, 0.004, 40)
+	scenarios.movable_resources(s,10)
 
 	#s.update_grid()
 	#gui.show_grid()

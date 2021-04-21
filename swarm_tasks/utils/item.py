@@ -75,6 +75,35 @@ class Contamination(Attractor):
 		self.polygon = self.pos.buffer(self.radius)
 		#print(self.radius)
 
+
+
+class Resource(Attractor):
+	def __init__(self, position, radius=0.5, density=1):
+		"""
+		Movable resource, for forraging/gathering
+		Args:
+			position: (x,y) tuple
+			radius
+		"""
+		super().__init__(Point(*position).buffer(radius))
+		self.radius = radius
+		self.pos = position
+		self.subtype = 'resource'
+		self.weight = density*radius*radius
+		self.min_bots_needed = self.weight/4
+
+	def move_to(self, new_pos):
+		#new_pos: (x,y) tuple
+		self.pos = Point(*new_pos)
+		self.polygon = self.pos.buffer(self.radius)
+
+	def deplete(self, decrement=1, rate = 0.1):
+		#Not in use yet
+		#Similar to contam update() method
+		self.radius -= decrement*rate/(self.radius**2)
+		self.polygon = self.pos.buffer(self.radius)
+
+
 class Obstacle(Item):
 	#Enhancement
 	pass

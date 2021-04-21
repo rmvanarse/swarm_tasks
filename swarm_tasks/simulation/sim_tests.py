@@ -24,3 +24,23 @@ def num_bots_around_item(sim, item, thresh_dist = 0.2):
 			count+=1
 
 	return count
+
+
+def bots_picking_item(sim, item, pick_up_state=0, thresh_dist = 0.2):
+	"""
+	List of bots having state=pick_up_state in contact with the item
+	"""
+	bots = []
+
+	for bot in sim.swarm:
+		if bot.state != pick_up_state:
+			continue
+		pos = Point(bot.get_position())
+		p1,p2 = nearest_points(pos, item.polygon)
+		r = p2.distance(p1)
+
+		if r<thresh_dist+bot.size:
+			bots.append(bot)
+
+	return bots
+

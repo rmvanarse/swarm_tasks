@@ -116,6 +116,8 @@ class Simulation:
 
 		#Check for external items (TODO)
 		for item in self.contents.items:
+			if ignore == item:
+				continue
 			if item.polygon.distance(Point(x,y))<r:
 				return False
 

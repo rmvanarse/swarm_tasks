@@ -95,7 +95,8 @@ class Bot:
 			#Second condition checks for unstuck (current location not free)
 			self.x, self.y = x_,y_
 		else:
-			print("Collision!")
+			pass
+			#print("Collision!")
 
 	def turn(self, angle):
 		self.theta +=angle
@@ -123,7 +124,7 @@ class Bot:
 		else:
 			self.turn(turn_angle)
 			self.step(min(speed,self.max_speed)*step_size)
-			
+
 
 	def set_sim(self, sim):
 		self.sim = sim
