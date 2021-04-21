@@ -33,7 +33,7 @@ while 1:
 		cmd = frg.gather_resources(b)
 		cmd.exec(b)
 
-	scenarios.movable_resources(s,2)
+	scenarios.movable_resources(s,4)
 
 	#s.update_grid()
 	#gui.show_grid()

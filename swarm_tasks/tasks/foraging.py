@@ -49,6 +49,7 @@ def gather_resources(bot, use_base_control=True,\
 
 	neighbours_line = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_LINE)
 	neighbours_deployed = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_DEPLOY)
+	neighbours_waiting = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_ENDPOINT)
 
 	#SEARCH
 	if bot.state == STATE_SEARCH:
@@ -56,8 +57,8 @@ def gather_resources(bot, use_base_control=True,\
 									exp_weight_params=[1.0,1.5],\
 									disp_weight_params=[2.0, 1.0])
 
-		if (len(neighbours_deployed) or len(neighbours_line)):
-			switch(bot, STATE_LINE, 0.005)
+		if (len(neighbours_deployed) or len(neighbours_line) or neighbours_waiting):
+			switch(bot, STATE_LINE, 0.01)
 		
 		if item_visible:
 			switch(bot, STATE_DEPLOY, 0.005)
@@ -68,17 +69,38 @@ def gather_resources(bot, use_base_control=True,\
 		cmd = surround_attractor(bot)
 		switch(bot, STATE_SEARCH, 0.002)
 		
-		if num_contact and len(neighbours_line):
-			bot.state = STATE_ENGAGE
+		if num_contact:
+			bot.state = STATE_ENDPOINT
 
+		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
+
+	#WAITING
+	if bot.state == STATE_ENDPOINT:
+		cmd = aggr_centroid(bot)*0.001
+		
+		if num_contact and len(neighbours_line):
+			switch(bot, STATE_ENGAGE, 0.1)
+
+		if not num_contact:
+			bot.state = STATE_DEPLOY
+
+		if num_contact>1:
+			bot.state = STATE_SEARCH
+
+		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
 
 	#LINE
 	if bot.state == STATE_LINE:
 		cmd = surround_attractor(bot)
-		cmd = line(bot, LINE_NEIGHBOURHOOD_RADIUS, True, [STATE_LINE, STATE_DEPLOY])
+		cmd += line(bot, LINE_NEIGHBOURHOOD_RADIUS, True, [STATE_LINE, STATE_DEPLOY])
+		cmd += aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.2
 		
 		if item_visible:
 			switch(bot, STATE_DEPLOY, 0.005)
+
+		if num_contact:
+			bot.state = STATE_SEARCH
+
 		switch(bot, STATE_SEARCH, 0.0025)
 
 
@@ -90,11 +112,16 @@ def gather_resources(bot, use_base_control=True,\
 		if num_contact>1:
 			bot.state = STATE_SEARCH
 
+		if not len(neighbours_line):
+			bot.state = STATE_ENDPOINT
+
+		switch(bot, STATE_ENDPOINT, 0.005)
+
 
 
 	#Add base control if needed
-	if(use_base_control):
+	if(use_base_control and  bot.state != STATE_ENDPOINT and bot.state != STATE_ENGAGE):
 		cmd += base_control.base_control(bot)*0.5
-		cmd += base_control.obstacle_avoidance(bot)
+		cmd += base_control.obstacle_avoidance(bot)*0.3
 
 	return cmd
