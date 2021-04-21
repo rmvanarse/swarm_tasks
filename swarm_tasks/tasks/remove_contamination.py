@@ -23,20 +23,23 @@ def remove_contamination(bot, use_base_control=True,\
 						thresh_dist = 0.25):
 
 	#If item is in contact or item is seen, change state
-	flag=0
+	flag=False
 	for item in bot.sim.contents.items:
 		if item.subtype == 'contamination':
 			pos = Point(bot.get_position())
 			p1,p2 = nearest_points(pos, item.polygon)
 			r = p2.distance(p1)
-			if r< bot.size+thresh_dist:
-				flag=1
+			
+			if r<= bot.size+thresh_dist:
+				flag=True
 				bot.set_state(STATE_PERIMETER)
 				break
+			
 			if r < PERIMETER_NEIGHBOURHOOD_RADIUS:
-				flag=1
+				flag=True
 				bot.set_state(STATE_RUSH)
-				break
+				continue #continue searching for STATE_PERIM
+	
 	if not flag:
 		bot.set_state(STATE_SEARCH)
 

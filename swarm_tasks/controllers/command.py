@@ -17,6 +17,8 @@ Control functions for tasks, PID, etc. will add to low-range potential field
 
 """
 
+VEC_MAX = robot.MAX_SPEED*3.5
+
 class Cmd:
 	"""
 	Output of the controller
@@ -47,6 +49,12 @@ class Cmd:
 				self.dir-=2*np.pi
 
 			self.vec = np.array([np.cos(self.dir), np.sin(self.dir)])*self.speed
+			self.trunc(VEC_MAX)
+	
+	def trunc(self, max_val):
+		self.vec*=min(max_val/(self.speed+0.00001), 1)
+		self.speed = min(self.speed, max_val)
+		
 
 	def exec(self, bot):
 		bot.move(self.dir, self.speed)
