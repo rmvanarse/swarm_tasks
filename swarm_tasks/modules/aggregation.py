@@ -3,9 +3,10 @@ import swarm_tasks.controllers as controllers
 
 import numpy as np
 
-def aggr_centroid(bot,neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
+def aggr_centroid(bot,neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL,\
+				single_state=False, state=None):
 
-	neighbours = bot.neighbours(neighbourhood_radius)
+	neighbours = bot.neighbours(neighbourhood_radius, single_state, state)
 	num_neighbours = len(neighbours)
 	
 	if not num_neighbours:

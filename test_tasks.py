@@ -14,7 +14,7 @@ import swarm_tasks.controllers.base_control as base_control
 from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.tasks import area_coverage as cvg
 from swarm_tasks.tasks import remove_contamination as remcon
-
+from swarm_tasks.tasks import foraging as frg
 import numpy as np
 
 
@@ -30,10 +30,10 @@ gui.show_bots()
 while 1:
 	for b in s.swarm:
 
-		cmd = remcon.remove_contamination(b, use_follow_state = False)
+		cmd = frg.gather_resources(b)
 		cmd.exec(b)
 
-	scenarios.movable_resources(s,10)
+	scenarios.movable_resources(s,2)
 
 	#s.update_grid()
 	#gui.show_grid()

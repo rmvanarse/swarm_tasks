@@ -17,7 +17,7 @@ class Gui:
 		self.ax.set_ylim([0, sim.size[1]])
 		self.ax.set_xlim([0, sim.size[0]])
 
-		self.state_colors = ['blue','green','red','orange']
+		self.state_colors = ['blue','green','red','orange', 'purple']
 
 		self.grid_scatter = None
 

@@ -35,12 +35,18 @@ def circle(bot, radius,\
 	return cmd
 
 
-def line(bot, neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
+def line(bot, neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL,\
+			selected_states= False, states=[]):
 	"""
 	Performs linear regression among neighbours
 	Returns cmd towards (& perpendicular) to the line
 	"""
-	neighbours = bot.neighbours(neighbourhood_radius)
+	neighbours = []
+	if selected_states:
+		for state in states:
+			neighbours += bot.neighbours(neighbourhood_radius, True, state)
+	else:
+		neighbours = bot.neighbours(neighbourhood_radius)
 	num_neighbours = len(neighbours)
 
 	if not num_neighbours:
