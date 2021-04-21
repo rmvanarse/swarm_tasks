@@ -89,7 +89,10 @@ class Bot:
 		x_ = self.x + step_size*np.cos(self.theta)
 		y_ = self.y + step_size*np.sin(self.theta)
 
-		if self.sim.check_free(x_,y_,self.size-0.01, ignore=self):
+		if self.sim.check_free(x_,y_,self.size+0.01, ignore=self) or\
+		not self.sim.check_free(self.x, self.y, self.size-0.01, ignore=self):
+			#First condition checks if new location is free
+			#Second condition checks for unstuck (current location not free)
 			self.x, self.y = x_,y_
 		else:
 			print("Collision!")
@@ -120,7 +123,7 @@ class Bot:
 		else:
 			self.turn(turn_angle)
 			self.step(min(speed,self.max_speed)*step_size)
-
+			
 
 	def set_sim(self, sim):
 		self.sim = sim
@@ -135,7 +138,6 @@ class Bot:
 
 	def goal_exists(self):
 		return self.goal_given
-
 
 	def get_state(self):
 		return self.state

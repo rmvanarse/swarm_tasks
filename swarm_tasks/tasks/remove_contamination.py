@@ -14,7 +14,8 @@ from swarm_tasks.tasks import area_coverage as cvg
 PERIMETER_NEIGHBOURHOOD_RADIUS = 4
 
 STATE_SEARCH = 0
-STATE_PERIMETER = 1
+STATE_FOLLOW = 1
+STATE_PERIMETER = 2
 STATE_RUSH = 3
 
 def remove_contamination(bot, use_base_control=True,\
@@ -51,10 +52,17 @@ def remove_contamination(bot, use_base_control=True,\
 									disp_weight_params=[2.0, 1.0]) * search_weight
 
 		#If a RUSH bot is seen, follow it
-		neighbours = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_RUSH)
-		if len(neighbours)>0:
-			cmd+= follow_leader(bot, neighbours[0])
+		#STATE_FOLLOW are only the robots that see a rushing robot
+		#If a STATE_FOLLOW neighbour is seen, it is followed without changing state
+		neighbours_rush = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_RUSH)
+		neighbours_follow = bot.neighbours(PERIMETER_NEIGHBOURHOOD_RADIUS,single_state=True, state=STATE_FOLLOW)
 		
+		if len(neighbours_rush)>0:
+			cmd+= follow_leader(bot, neighbours_rush[0])*3
+			bot.set_state(STATE_FOLLOW) #DEBUG
+		
+		elif len(neighbours_follow)>0:
+			cmd+= follow_leader(bot, neighbours_follow[0])*3
 
 	if bot.state==STATE_RUSH:
 		cmd =surround_attractor(bot) #Goes slow in hopes of being seen

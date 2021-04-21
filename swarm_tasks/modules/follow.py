@@ -13,7 +13,7 @@ def follow_leader(bot, leader):
 	x1,y1 = leader.get_position()
 
 	dir_vec = np.array([x1-x0, y1-y0])
-	dir_vec/=np.linalg.norm(dir_vec)
+	dir_vec/=(np.linalg.norm(dir_vec)+0.001)
 
 	cmd = controllers.command.Cmd(dir_vec.tolist())
 

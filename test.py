@@ -12,10 +12,11 @@ import swarm_tasks.controllers.base_control as base_control
 from swarm_tasks.modules.aggregation import aggr_centroid, aggr_field
 from swarm_tasks.modules.dispersion import disp_field
 from swarm_tasks.modules.formations import circle
-from swarm_tasks.modules.formations import line	
+from swarm_tasks.modules.formations import line
 
 from swarm_tasks.modules.surround import surround_attractor
 from swarm_tasks.modules import exploration as exp
+from swarm_tasks.modules import follow
 
 from swarm_tasks.modules import decisions
 
@@ -74,7 +75,7 @@ while 1:
 		AGGR/DISP
 		"""
 
-		cmd+= disp_field(b)*(0.5+1/(i*0.001+1))
+		cmd+= disp_field(b)
 		#cmd+=aggr_centroid(b)*0.15
 		#cmd+=aggr_field(b)
 
@@ -85,9 +86,12 @@ while 1:
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)*(min(1, 0.001*i))
+		cmd += exp.explore(b)
 
-
+		"""
+		FOLLOW
+		"""
+		#cmd+=follow.follow_leader(b,s.swarm[0])
 		"""
 		-------------
 		EXECUTE
