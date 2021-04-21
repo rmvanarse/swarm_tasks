@@ -26,7 +26,7 @@ def num_bots_around_item(sim, item, thresh_dist = 0.2):
 	return count
 
 
-def bots_picking_item(sim, item, pick_up_state=0, thresh_dist = 0.2):
+def bots_picking_item(sim, item, pick_up_state=1, thresh_dist = 0.2):
 	"""
 	List of bots having state=pick_up_state in contact with the item
 	"""

@@ -8,6 +8,7 @@ class Item:
 		self.polygon = polygon #May need only dimensions
 		self.type = None
 		self.subtype = None
+		self.pos = self.get_position()
 
 	def get_position(self):
 		"""
@@ -36,6 +37,9 @@ class Clutter(Item):
 
 	def move(self, translation, rotation):
 		"""
+		*** REPLAN THIS ***
+		*** WILL CONFLICT WITH move() FROM OTHER CHILDREN CLASSES ***
+
 		Translation: 2d vector 
 		Rotation: angle
 		"""
@@ -92,10 +96,22 @@ class Resource(Attractor):
 		self.weight = density*radius*radius
 		self.min_bots_needed = self.weight/4
 
+	
 	def move_to(self, new_pos):
 		#new_pos: (x,y) tuple
 		self.pos = Point(*new_pos)
 		self.polygon = self.pos.buffer(self.radius)
+
+	
+
+	def move(self, dir_, speed):
+		#Similar to bot.move
+		#Can be used with cmd exec
+		speed/=40	#Tuned
+		x_,y_ = np.array(self.pos)
+		self.move_to((x_+ speed*np.cos(dir_), y_+ speed*np.sin(dir_)))
+		return None
+
 
 	def deplete(self, decrement=1, rate = 0.1):
 		#Not in use yet

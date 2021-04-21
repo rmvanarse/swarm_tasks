@@ -19,7 +19,8 @@ import numpy as np
 
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-s = sim.Simulation(num_bots=20, env_name='rectangles')
+s = sim.Simulation(num_bots=20, env_name='empty_world')
+#s = sim.Simulation(num_bots=20, env_name='rectangles')
 
 gui = viz.Gui(s)
 gui.show_env()
