@@ -17,7 +17,7 @@ from swarm_tasks.tasks import area_coverage as cvg
 
 
 
-PERIMETER_NEIGHBOURHOOD_RADIUS = 4
+PERIMETER_NEIGHBOURHOOD_RADIUS = 4.5
 LINE_NEIGHBOURHOOD_RADIUS = 1.5
 utils.robot.MAX_ANGULAR = 1
 
@@ -44,16 +44,19 @@ def gather_resources(bot, use_base_control=True,\
 			p1,p2 = nearest_points(pos, item.polygon)
 			r = p2.distance(p1)
 
-			if item.subtype == 'nest':
-				nest_pt = np.array(p2)
-				nest_visible = True
 			
 			if r<= bot.size+thresh_dist:
+				if item.subtype == 'nest':
+					nest_pt = np.array(p2)
+					nest_visible = True
 				num_contact += 1
 				item_visible = True
 				continue
 			
 			if r < PERIMETER_NEIGHBOURHOOD_RADIUS:
+				if item.subtype == 'nest':
+					nest_pt = np.array(p2)
+					nest_visible = True
 				item_visible = True
 				continue
 
@@ -70,7 +73,8 @@ def gather_resources(bot, use_base_control=True,\
 
 		if (len(neighbours_deployed) or len(neighbours_line) or neighbours_waiting):
 			switch(bot, STATE_LINE, 0.1)
-		
+			pass
+
 		if item_visible:
 			switch(bot, STATE_DEPLOY, 0.005)
 
@@ -93,8 +97,8 @@ def gather_resources(bot, use_base_control=True,\
 		else:
 			cmd = aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.01
 		
-		if num_contact and len(neighbours_line):
-			switch(bot, STATE_ENGAGE, 0.01)
+		if num_contact and (len(neighbours_line) or nest_visible):
+			switch(bot, STATE_ENGAGE, 0.3*nest_visible +0.05)
 
 		if not num_contact:
 			bot.state = STATE_DEPLOY
@@ -114,6 +118,8 @@ def gather_resources(bot, use_base_control=True,\
 		
 		if item_visible:
 			switch(bot, STATE_DEPLOY, 0.005)
+		else:
+			cmd += exp.explore(bot)*0.5 #(Replace with linearly increasing truncated wt)
 
 		if num_contact:
 			bot.state = STATE_SEARCH

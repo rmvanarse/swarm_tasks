@@ -61,8 +61,8 @@ def movable_resources(sim, num_resources):
 			continue
 
 		#Avoid other items
-		weights_dict = {'bots':0.2, 'obstacles':1, 'borders':1, 'goal':0, 'items':0.25}
-		weights_dict_nest = {'bots':0, 'obstacles':0, 'borders':0, 'goal':0, 'items':-0.25}
+		weights_dict = {'bots':0.2, 'obstacles':1, 'borders':1, 'goal':0, 'items':1}
+		weights_dict_nest = {'bots':0, 'obstacles':0, 'borders':0, 'goal':0, 'items':-1.0}
 		movers = sim_tests.bots_picking_item(sim,r)
 		#weights_dict['bots']=len(movers)
 		cmd = potf.get_field(np.array(r.pos), sim, weights=weights_dict,\
