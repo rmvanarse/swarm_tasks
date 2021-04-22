@@ -4,7 +4,7 @@ import swarm_tasks.controllers.potential_field as potf
 
 
 def base_control(bot, \
-			field_weights={'bots':1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':0},\
+			field_weights={'bots':1, 'obstacles':1, 'borders':1, 'goal':-3, 'items':0},\
 			order=2):
 	"""
 	ToDo: Tuning

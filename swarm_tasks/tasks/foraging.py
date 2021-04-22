@@ -99,9 +99,10 @@ def gather_resources(bot, use_base_control=True,\
 			else:
 				cmd = aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.01
 			
-			if num_contact and (len(neighbours_line) or nest_visible):
-				switch(bot, STATE_ENGAGE, 0.3*nest_visible +0.05)
-
+			if (len(neighbours_line) or nest_visible):
+				switch(bot, STATE_ENGAGE,\
+						0.3*nest_visible + 0.3*(len(neighbours_line)>0)*(not nest_visible))
+			switch(bot, STATE_ENGAGE, 0.05)
 		
 		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
 
@@ -115,7 +116,7 @@ def gather_resources(bot, use_base_control=True,\
 		if num_contact>1:
 			bot.state = STATE_SEARCH
 
-		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
+		switch(bot, STATE_SEARCH, 0.02*len(neighbours_waiting))
 
 	#LINE
 	if bot.state == STATE_LINE:
@@ -126,10 +127,10 @@ def gather_resources(bot, use_base_control=True,\
 		cmd += base_control.base_control(bot)
 		
 		if item_visible:
-			switch(bot, STATE_DEPLOY, 0.006*(not nest_visible)+0.001)
+			switch(bot, STATE_DEPLOY, 0.003*(not nest_visible)+0.001)
 		
 		if not nest_visible:
-			cmd += exp.explore(bot)*0.5 #(Replace with linearly increasing truncated wt)
+			cmd += exp.explore(bot)*0.75 #(Replace with linearly increasing truncated wt)
 			cmd += aggr_centroid(bot)*0.1
 			cmd += surround_attractor(bot)*0.05
 		else:
@@ -138,7 +139,7 @@ def gather_resources(bot, use_base_control=True,\
 		if num_contact:
 			bot.state = STATE_SEARCH
 		if not len(neighbours_line) + len(neighbours_waiting):
-			switch(bot, STATE_SEARCH, 0.1)	#Tune
+			switch(bot, STATE_SEARCH, 0.075)	#Tune
 
 		switch(bot, STATE_SEARCH, 0.0025)
 
@@ -157,7 +158,7 @@ def gather_resources(bot, use_base_control=True,\
 			bot.state = STATE_SEARCH
 
 		if not len(neighbours_line):
-			bot.state = STATE_DEPLOY
+			switch(bot, STATE_DEPLOY, 0.2)
 
 		switch(bot, STATE_DEPLOY, 0.005)
 
@@ -166,7 +167,7 @@ def gather_resources(bot, use_base_control=True,\
 	#Add base control if needed -- IS ALWAYS NEEDED!!
 	if(use_base_control and bot.state != STATE_ENGAGE):
 		cmd += base_control.base_control(bot)*0.5
-		field_weights={'bots':1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':1}
+		field_weights={'bots':1, 'obstacles':1, 'borders':2, 'goal':-3, 'items':1}
 		if bot.state == STATE_DEPLOY:
 			field_weights['items']=0.00
 		elif bot.state == STATE_ENDPOINT:
