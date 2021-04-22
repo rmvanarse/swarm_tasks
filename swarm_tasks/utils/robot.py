@@ -125,6 +125,14 @@ class Bot:
 			self.turn(turn_angle)
 			self.step(min(speed,self.max_speed)*step_size)
 
+	def unstuck(self, r):
+		"""
+		Use only if no other option is available
+		"""
+		x,y = np.random.randn(2)*r
+		while not self.sim.check_free(x,y,r,ignore=self):
+			x,y = np.random.randn(2)*r
+		self.x, self.y = x,y
 
 	def set_sim(self, sim):
 		self.sim = sim

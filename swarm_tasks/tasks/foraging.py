@@ -37,6 +37,7 @@ def gather_resources(bot, use_base_control=True,\
 	item_visible = False
 	nest_visible = False
 	nest_pt = None
+	nest_contact=False
 
 	for item in bot.sim.contents.items:
 		if item.subtype in ['resource', 'nest']:
@@ -49,6 +50,8 @@ def gather_resources(bot, use_base_control=True,\
 				if item.subtype == 'nest':
 					nest_pt = np.array(p2)
 					nest_visible = True
+					nest_contact = True
+					bot.state = STATE_ENDPOINT
 				num_contact += 1
 				item_visible = True
 				continue
@@ -66,12 +69,17 @@ def gather_resources(bot, use_base_control=True,\
 
 	#SEARCH
 	if bot.state == STATE_SEARCH:
-		cmd = cvg.disp_exp_area_cvg(bot, use_base_control=False, \
-									exp_weight_params=[1.0,1.5],\
-									disp_weight_params=[2.0, 1.0])
-		cmd += disp(bot)
+		# cmd = cvg.disp_exp_area_cvg(bot, use_base_control=False, \
+		# 							exp_weight_params=[1.0,1.5],\
+		# 							disp_weight_params=[2.0, 1.0])
+		cmd = disp(bot, item_types=['all'])*2
+		cmd += exp.explore(bot)*1.5
 
-		if (len(neighbours_deployed) or len(neighbours_line) or neighbours_waiting):
+		if nest_contact:
+			bot.unstuck(bot.size)
+			print("UNTUCK!!")
+
+		if (len(neighbours_line) or neighbours_waiting):
 			switch(bot, STATE_LINE, 0.1)
 			pass
 
@@ -85,20 +93,20 @@ def gather_resources(bot, use_base_control=True,\
 		switch(bot, STATE_SEARCH, 0.002)
 		
 		if num_contact:
-			bot.state = STATE_ENDPOINT
-
+			#bot.state = STATE_ENDPOINT	#
+			if nest_visible:
+				cmd = follow.follow_point(bot, nest_pt)*0.01
+			else:
+				cmd = aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.01
+			
+			if num_contact and (len(neighbours_line) or nest_visible):
+				switch(bot, STATE_ENGAGE, 0.3*nest_visible +0.05)
+		
 		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
 
-	#WAITING
+	#HOME
 	if bot.state == STATE_ENDPOINT:
-		
-		if nest_visible:
-			cmd = follow.follow_point(bot, nest_pt)*0.01
-		else:
-			cmd = aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.01
-		
-		if num_contact and (len(neighbours_line) or nest_visible):
-			switch(bot, STATE_ENGAGE, 0.3*nest_visible +0.05)
+		cmd = surround_attractor(bot)
 
 		if not num_contact:
 			bot.state = STATE_DEPLOY
@@ -117,12 +125,19 @@ def gather_resources(bot, use_base_control=True,\
 		cmd += base_control.base_control(bot)
 		
 		if item_visible:
-			switch(bot, STATE_DEPLOY, 0.005)
-		else:
+			switch(bot, STATE_DEPLOY, 0.006*(not nest_visible)+0.001)
+		
+		if not nest_visible:
 			cmd += exp.explore(bot)*0.5 #(Replace with linearly increasing truncated wt)
+			cmd += aggr_centroid(bot)*0.1
+			cmd += surround_attractor(bot)*0.05
+		else:
+			cmd += disp(bot)*0.2
 
 		if num_contact:
 			bot.state = STATE_SEARCH
+		if not len(neighbours_line) + len(neighbours_waiting):
+			switch(bot, STATE_SEARCH, 0.1)	#Tune
 
 		switch(bot, STATE_SEARCH, 0.0025)
 
@@ -141,15 +156,18 @@ def gather_resources(bot, use_base_control=True,\
 			bot.state = STATE_SEARCH
 
 		if not len(neighbours_line):
-			bot.state = STATE_ENDPOINT
+			bot.state = STATE_DEPLOY
 
-		switch(bot, STATE_ENDPOINT, 0.005)
+		switch(bot, STATE_DEPLOY, 0.005)
 
 
 
-	#Add base control if needed
-	if(use_base_control and  bot.state != STATE_ENDPOINT and bot.state != STATE_ENGAGE):
+	#Add base control if needed -- IS ALWAYS NEEDED!!
+	if(use_base_control and bot.state != STATE_ENGAGE):
 		cmd += base_control.base_control(bot)*0.5
-		cmd += base_control.obstacle_avoidance(bot)*0.3
+		field_weights={'bots':1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':1}
+		if bot.state == STATE_DEPLOY or bot.state == STATE_ENDPOINT:
+			field_weights['items']=0.05
+		cmd += base_control.obstacle_avoidance(bot, field_weights)*0.3
 
 	return cmd

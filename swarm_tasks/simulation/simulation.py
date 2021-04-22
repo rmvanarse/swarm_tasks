@@ -118,7 +118,7 @@ class Simulation:
 		for item in self.contents.items:
 			if ignore == item:
 				continue
-			if item.polygon.distance(Point(x,y))<r:
+			if item.polygon.distance(Point(x,y))<=r:
 				return False
 
 		#Check for other bots
