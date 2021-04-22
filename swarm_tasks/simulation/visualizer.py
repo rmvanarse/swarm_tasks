@@ -55,6 +55,9 @@ class Gui:
 			if item.subtype == 'contamination':
 				self.ax.fill(x,y, fc='red', alpha=0.5)
 				continue
+			elif item.subtype == 'nest':
+				self.ax.fill(x,y, fc='purple', alpha =0.3)
+				continue
 			self.ax.fill(x,y, fc='orange', alpha=0.9)
 			#self.content_fills.append((x,y))
 	

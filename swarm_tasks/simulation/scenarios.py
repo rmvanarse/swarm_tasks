@@ -43,6 +43,7 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 
 def movable_resources(sim, num_resources):
 	if not len(sim.contents.items):
+		sim.contents.items.append(ex.Nest((1.5,1.5), 3))
 		for i in range(num_resources):
 			pos = np.random.rand(2)*(sim.size)
 			radius = np.random.rand()*0.5+0.5	#Currently 0.5<=r<=1
@@ -61,11 +62,17 @@ def movable_resources(sim, num_resources):
 
 		#Avoid other items
 		weights_dict = {'bots':0.2, 'obstacles':1, 'borders':1, 'goal':0, 'items':0.25}
+		weights_dict_nest = {'bots':0, 'obstacles':0, 'borders':0, 'goal':0, 'items':-0.25}
 		movers = sim_tests.bots_picking_item(sim,r)
 		#weights_dict['bots']=len(movers)
 		cmd = potf.get_field(np.array(r.pos), sim, weights=weights_dict,\
 							max_dist=r.radius+utils.robot.DEFAULT_SIZE +0.025,\
-							item_types = ['all'])
+							item_types = ['resource'])
+		cmd += potf.get_field(np.array(r.pos), sim, weights=weights_dict_nest,\
+							max_dist=r.radius +0.025,\
+							item_types = ['nest'])
+
+
 		cmd.exec(r)
 		sim.has_item_moved = True
 

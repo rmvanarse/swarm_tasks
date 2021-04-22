@@ -53,8 +53,9 @@ class Nest(Attractor):
 			position: tuple (x,y)
 			radius
 		"""
-		super().__init__(Point(*postion).buffer(radius))
+		super().__init__(Point(*position).buffer(radius))
 		self.subtype = 'nest'
+		self.pos = position
 
 
 

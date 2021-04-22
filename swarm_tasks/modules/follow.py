@@ -18,3 +18,17 @@ def follow_leader(bot, leader):
 	cmd = controllers.command.Cmd(dir_vec.tolist())
 
 	return cmd
+
+
+def follow_point(bot, pos):
+	"""
+	Returns a Cmd object in the direction of the 'pos' tuple
+	"""
+	x0,y0 = bot.get_position()
+
+	dir_vec = np.array([pos[0]-x0, pos[1]-y0])
+	dir_vec/=(np.linalg.norm(dir_vec)+0.001)
+
+	cmd = controllers.command.Cmd(dir_vec.tolist())
+
+	return cmd
