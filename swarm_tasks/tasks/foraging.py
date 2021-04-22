@@ -31,7 +31,7 @@ STATE_ENDPOINT = 2	#This state has no base control
 
 
 def gather_resources(bot, use_base_control=True,\
-					thresh_dist=0.2):
+					thresh_dist=0.1):
 
 	num_contact = 0
 	item_visible = False
@@ -101,6 +101,7 @@ def gather_resources(bot, use_base_control=True,\
 			
 			if num_contact and (len(neighbours_line) or nest_visible):
 				switch(bot, STATE_ENGAGE, 0.3*nest_visible +0.05)
+
 		
 		switch(bot, STATE_SEARCH, 0.01*len(bot.neighbours(bot.size*3)))
 
@@ -118,7 +119,7 @@ def gather_resources(bot, use_base_control=True,\
 
 	#LINE
 	if bot.state == STATE_LINE:
-		cmd = line(bot, LINE_NEIGHBOURHOOD_RADIUS, True, [STATE_LINE, STATE_ENDPOINT])*2.5
+		cmd = line(bot, LINE_NEIGHBOURHOOD_RADIUS, True, [STATE_LINE, STATE_ENDPOINT, STATE_DEPLOY])*2.5
 		#cmd = surround_attractor(bot)*0.2
 		#cmd += aggr_centroid(bot, single_state=True, state=STATE_LINE)*0.2
 		#cmd += exp.explore(bot)
@@ -166,8 +167,11 @@ def gather_resources(bot, use_base_control=True,\
 	if(use_base_control and bot.state != STATE_ENGAGE):
 		cmd += base_control.base_control(bot)*0.5
 		field_weights={'bots':1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':1}
-		if bot.state == STATE_DEPLOY or bot.state == STATE_ENDPOINT:
-			field_weights['items']=0.05
+		if bot.state == STATE_DEPLOY:
+			field_weights['items']=0.00
+		elif bot.state == STATE_ENDPOINT:
+			field_weights['bots']=3.0
+			field_weights['items']=0.00
 		cmd += base_control.obstacle_avoidance(bot, field_weights)*0.3
 
 	return cmd
