@@ -11,8 +11,20 @@ import swarm_tasks.utils.item as ex
 
 import numpy as np
 
+EVENT_LOG = "#EVENT_LOG\n"
+log_flag = False
 
 def contaminations(sim, prob_new=0.0002, wait_time=20):
+	global EVENT_LOG, log_flag
+	min_containment_bots = 3
+	if not log_flag:
+		EVENT_LOG += "SCENARIO: RANDOM GROWING CONTAMIATIONS"
+		EVENT_LOG += "\nprob_new: "+str(prob_new)
+		EVENT_LOG += "\ncontamination growth rate: "+str(min_containment_bots)
+		EVENT_LOG += "\ncontamination removal rate: 1.0 per robot"	#Hardcoded in c.update call
+		EVENT_LOG += "\n"
+		log_flag = True
+
 	#Rand for new contamination
 	rand_ = np.random.rand()
 
@@ -26,18 +38,25 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 			pos = np.random.rand(2)*sim.size
 
 		sim.contents.items.append(ex.Contamination(pos, 0.25))
+		EVENT_LOG += ("\nSim time:"+str(sim.time_elapsed)+": New contamination at "+str(pos))
 
 	#Update Contaminated area
 	for c in sim.contents.items:
 		if c.subtype != 'contamination':
 			continue
-		c.update(3-sim_tests.num_bots_around_item(sim, c, 1))
+		c.update(min_containment_bots-sim_tests.num_bots_around_item(sim, c, 1))
 		if c.radius < 0.4:
+			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed) +": Contamination removed at " +str(c.pos)
 			sim.contents.items.remove(c)
 			print("ITEM REMOVED\nNum items: ", len(sim.contents.items))
 
+
 	sim.has_item_moved = True
 
+	#DRBUG:
+	if not sim.time_elapsed % 100:
+		#print(EVENT_LOG)
+		pass
 	return None
 
 

@@ -21,10 +21,12 @@ class Simulation:
 		#Load world into self.env
 		if env_name==None:
 			self.env = envs.world.World()
+			self.env_name = "Default"
 			print("Using default world")
 
 		else:
 			self.env = envs.world.World(filename=env_name+'.yaml')
+			self.env_name = env_name
 
 
 		#Set simulation parameters based on world and robots
@@ -34,10 +36,12 @@ class Simulation:
 		#Load external items on top of env/world
 		if contents_file==None:
 			self.contents = envs.items.Contents()
+			self.contents_name = "None"
 			print("No external items loaded")
 		else:
 			self.contents = envs.items.Contents(filename = contents_file+'.yaml') #Add filename 
-
+			self.contents_name = contents_file
+		
 		self.has_item_moved = True #(Used to decide whether to update polygons in viz)
 		
 
@@ -150,6 +154,17 @@ class Simulation:
 		
 		return np.sum(self.grid)/(self.grid.size)
 
+	#LOG THE SIMULATION PARAMETERS (Not the same as save sim)
+	def get_sim_param_log(self):
+		
+		params = str()
+		params += "# SIMULATION PARAMETERS\n"
+		params += "\nsize: " + str(self.size)
+		params += "\nnum_bots: " + str(self.num_bots)
+		params += "\nenv_name: " + str(self.env_name)
+		params += "\ncontents_name: " + str(self.contents_name)
+
+		return params + "\n\n"
 
 	#FOR LOADED SIMULATIONS:
 	#The visualizer should work for loaded sims without modifications

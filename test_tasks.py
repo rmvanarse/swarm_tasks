@@ -17,26 +17,24 @@ from swarm_tasks.tasks import remove_contamination as remcon
 from swarm_tasks.tasks import foraging as frg
 import numpy as np
 
+import swarm_tasks.utils.logging as logging
+
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-s = sim.Simulation(num_bots=20, env_name='empty_world')
-#s = sim.Simulation(num_bots=20, env_name='rectangles')
+s = sim.Simulation(num_bots=10, env_name='rectangles')
 
 gui = viz.Gui(s)
 gui.show_env()
 gui.show_bots()
-#gui.show_grid()
 
 while 1:
 	for b in s.swarm:
 
-		cmd = frg.gather_resources(b)
+		cmd = remcon.remove_contamination(b)
 		cmd.exec(b)
 
-	scenarios.movable_resources(s,5)
+	scenarios.contaminations(s, 0.0002, 40) #0.004 for 20 bots
 
-	#s.update_grid()
-	#gui.show_grid()
 	gui.update()
 	s.time_elapsed+=1
 

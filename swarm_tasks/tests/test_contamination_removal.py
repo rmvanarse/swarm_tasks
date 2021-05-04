@@ -2,7 +2,7 @@ print("This is a backup script. Please use test_tasks.py")
 exit()
 
 
-mport swarm_tasks
+import swarm_tasks
 
 from swarm_tasks.simulation import simulation as sim
 from swarm_tasks.simulation import visualizer as viz

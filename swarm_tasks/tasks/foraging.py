@@ -77,7 +77,7 @@ def gather_resources(bot, use_base_control=True,\
 
 		if nest_contact:
 			bot.unstuck(bot.size)
-			print("UNTUCK!!")
+			print("UNSTUCK!!")
 
 		if (len(neighbours_line) or neighbours_waiting):
 			switch(bot, STATE_LINE, 0.1)

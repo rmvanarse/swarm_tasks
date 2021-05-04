@@ -38,7 +38,7 @@ def disp_exp_area_cvg(bot, use_base_control=True,\
 	#Calculate weights and create command
 	weight_disp = disp_weight_function(t, *disp_weight_params)
 	weight_exp = exp_weight_function(t, *exp_weight_params)
-	
+
 	cmd = disp_field(bot, neighbourhood_radius = NEIGHBOURHOOD_RADIUS)*weight_disp
 	cmd += exp.explore(bot)*weight_exp
 	
