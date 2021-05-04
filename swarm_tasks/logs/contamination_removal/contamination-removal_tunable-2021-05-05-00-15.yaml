@@ -1,0 +1,26 @@
+# FORAGING HARDCODED TUNABLE PARAMETERS:
+# -----------------------------------
+
+PERIMETER_NEIGHBOURHOOD_RADIUS: 4
+
+surround_weight: 2.5
+search_weight: 2.0
+thresh_dist: 0.25
+use_follow_state: True
+
+STATE_SEARCH:
+	cvg_exp_weight_params: [1.0, 1.5]
+	cvg_disp_weight_params: [2.0, 1.0]
+
+follow_weight: 3
+
+STATE_RUSH:
+	surround_weight: 1
+
+STATE_PERIMETER:
+	surround_weight: 1
+	cvg_exp_weight_params: [0.5, 1]
+
+BASE_CONTROL:
+	base_control_weight: 0.5
+	obstacle_avoidance_weight: 1

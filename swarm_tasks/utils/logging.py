@@ -15,11 +15,23 @@ def log_robot():
 
 	return params+"\n\n"
 
-def save_log(logs, path, name):
+save_path = None
+def save_log(logs, path, name, ext=".yaml"):
 	#Log list is an array
 	#Also join time to name
-	time = time.strftime("%Y-%m-%d__%H-%M-%S")
-	pass
+	global save_path
+	if save_path == None:
+		time_ = time.strftime("%Y-%m-%d__%H-%M-%S")
+		filename = name+time_+ext
+		save_path = os.path.join(path, filename)
+
+	full_log = str()
+	for l in logs:
+		full_log += l +'\n'
+	f = open(save_path, "w")
+	f.write(full_log)
+	f.close()
+	return full_log
 
 def print_params(log):
 	print("Simulation parameters at "+time.strftime("%Y-%m-%d__%H-%M-%S")+'\n\n')

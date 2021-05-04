@@ -84,7 +84,7 @@ def movable_resources(sim, num_resources):
 			while not sim.check_free(*pos, radius+utils.robot.DEFAULT_SIZE):
 				pos = np.random.rand(2)*(sim.size)
 			sim.contents.items.append(ex.Resource(pos, radius))
-			EVENT_LOG += "\nResource "+str(i)+": "+str(pos)+" size="+str(radius)
+			EVENT_LOG += "\nResource "+str(i+1)+": "+str(pos)+" size="+str(radius)
 		#End for
 	#End if
 
@@ -113,6 +113,10 @@ def movable_resources(sim, num_resources):
 		cmd.exec(r)
 		sim.has_item_moved = True
 
+		#Test if  at nest (for logs)
+		bool_collected_before = sim_tests.item_at_nest(sim, r, nest_location, nest_size)
+		num_collected += bool_collected_before
+
 		#Move using movers
 		dir_movement = 0
 		n=len(movers)
@@ -121,21 +125,22 @@ def movable_resources(sim, num_resources):
 
 		for m in movers:
 			dir_movement+= m.theta/n
-		bool_collected_before = sim_tests.item_at_nest(sim, r, nest_location, nest_size)
 		Cmd(speed=n/r.weight, dir_=dir_movement).exec(r)
 
 		#Update lof if successfully collected
 		bool_collected_after = sim_tests.item_at_nest(sim, r, nest_location, nest_size)
-		num_collected += bool_collected_before or bool_collected_after	
+		
 		if bool_collected_after and not bool_collected_before:
 			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed)+": New resource collected"
 			collected_new = True
-
+			num_collected += 1
+		print(bool_collected_after)
+		print(num_collected)
 	#End for
 	if collected_new:
 		EVENT_LOG += "\nNum collected: "+str(num_collected)+" of "+str(num_resources)
 		if num_collected == num_resources:
-			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed)+": Success! Foraging completed"
+			EVENT_LOG += "\nSim time: "+str(sim.time_elapsed)+": Success! Foraging completed"
 
 	#DEBUG:
 	if not sim.time_elapsed % 100:
@@ -144,3 +149,6 @@ def movable_resources(sim, num_resources):
 	return None
 
 
+
+def get_event_log():
+	return EVENT_LOG

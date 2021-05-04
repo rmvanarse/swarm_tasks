@@ -36,12 +36,11 @@ class Gui:
 			circle = plt.Circle((x,y), bot.size, color=self.state_colors[state_disp], fill=True)
 			self.fig.gca().add_artist(circle)
 
-
 			l=0.15
 			self.ax.arrow(x,y, \
 				(bot.size-l)*np.cos(theta), (bot.size-l)*np.sin(theta), \
 				head_width=l, head_length=l, \
-				fc='k', ec='k')
+				fc='k', ec='k', zorder=100)
 
 
 	def show_env(self):
@@ -67,7 +66,7 @@ class Gui:
 
 		"""
 		self.remove_artists()
-		self.show_bots()
+		#self.show_bots()
 		if self.sim.has_item_moved:
 			#for ext in self.content_fills:
 				#self.ax.fill(*ext, fc='w')
@@ -76,6 +75,7 @@ class Gui:
 			self.show_contents()
 			self.show_env()
 			self.sim.has_item_moved = False
+		self.show_bots()
 		plt.pause(0.0005)
 
 	def remove_artists(self):

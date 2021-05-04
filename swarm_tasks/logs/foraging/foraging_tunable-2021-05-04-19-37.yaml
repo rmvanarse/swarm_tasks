@@ -1,0 +1,52 @@
+# FORAGING HARDCODED TUNABLE PARAMETERS:
+# -----------------------------------
+
+PERIMETER_NEIGHBOURHOOD_RADIUS: 4.5
+LINE_NEIGHBOURHOOD_RADIUS: 1.5
+MAX_ANGULAR: 1
+
+base_control_thresh_dist: 0.1
+
+STATE_SEARCH:
+
+	disp_weight: 2.0
+	explore_weight: 1.5
+	
+	switch_line: 0.1
+	switch_deploy: 0.005
+
+STATE_DEPLOYED:
+	switch_search: 0.002
+	
+	follow_weight: 0.01
+	aggr_weight: 0.01
+	
+	switch_engage_neighbours: 0.3
+	switch_engage_nest: 0.3
+	switch_engage: 0.05
+	
+	switch_search_neighbours: 0.01
+	
+STATE_HOME:
+	switch_search_neighbours: 0.02
+
+STATE_LINE:
+	line_weight: 2.5
+	
+	switch_deploy_nest: 0.003
+	switch_deploy: 0.001
+	
+	exp_weight: 0.75
+	aggr_weight: 0.1
+	surround_weight: 0.05
+	disp_weight: 0.2
+	
+	switch_search_waiting: 0.075
+	switch_search: 0.0025
+
+STATE_ENGAGED:
+	switch_deploy_nb_line: 0.2
+	switch_deploy: 0.005
+BASE_CONTROL:
+	base_control_weight: 0.5
+	obstacle_avoidance_weight: 0.3

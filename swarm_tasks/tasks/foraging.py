@@ -15,6 +15,10 @@ from swarm_tasks.modules import follow
 
 from swarm_tasks.tasks import area_coverage as cvg
 
+"""
+ToDo:
+Load all parameters from logs/params yaml
+"""
 
 
 PERIMETER_NEIGHBOURHOOD_RADIUS = 4.5
