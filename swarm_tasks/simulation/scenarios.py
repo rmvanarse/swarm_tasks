@@ -11,10 +11,11 @@ import swarm_tasks.utils.item as ex
 
 import numpy as np
 
-EVENT_LOG = "#EVENT_LOG\n"
+EVENT_LOG = "EVENT_LOG\n"
 log_flag = False
 
 def contaminations(sim, prob_new=0.0002, wait_time=20):
+	#Create event log for the first call
 	global EVENT_LOG, log_flag
 	min_containment_bots = 3
 	if not log_flag:
@@ -49,6 +50,8 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed) +": Contamination removed at " +str(c.pos)
 			sim.contents.items.remove(c)
 			print("ITEM REMOVED\nNum items: ", len(sim.contents.items))
+			if len(sim.contents.items)==0:
+				EVENT_LOG += "\nSim time:"+str(sim.time_elapsed)+": Sim Success. All present contaminations removed."
 
 
 	sim.has_item_moved = True
@@ -61,19 +64,33 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 
 
 def movable_resources(sim, num_resources):
+	nest_location, nest_size = (1.5,1.5), 3
+
 	if not len(sim.contents.items):
-		sim.contents.items.append(ex.Nest((1.5,1.5), 3))
+		#Create events log for first call
+		global EVENT_LOG, log_flag
+		EVENT_LOG += "SCENARIO: FORAGING/ RESOURCE GATHERING"
+		EVENT_LOG += "\nnum_resources: " + str(num_resources)
+
+		#Create Nest
+		
+		sim.contents.items.append(ex.Nest(nest_location, nest_size))
+		EVENT_LOG += "\nNest: "+str(nest_location)+" size="+str(nest_size)
+		
+		#Create Resources in the env
 		for i in range(num_resources):
 			pos = np.random.rand(2)*(sim.size)
 			radius = np.random.rand()*0.5+0.5	#Currently 0.5<=r<=1
 			while not sim.check_free(*pos, radius+utils.robot.DEFAULT_SIZE):
 				pos = np.random.rand(2)*(sim.size)
 			sim.contents.items.append(ex.Resource(pos, radius))
+			EVENT_LOG += "\nResource "+str(i)+": "+str(pos)+" size="+str(radius)
 		#End for
 	#End if
 
 	#Move resources
-
+	num_collected = 0
+	collected_new = False
 	for r in sim.contents.items:
 		#Skip if item is not a resource
 		if r.subtype != 'resource':
@@ -104,11 +121,25 @@ def movable_resources(sim, num_resources):
 
 		for m in movers:
 			dir_movement+= m.theta/n
-
+		bool_collected_before = sim_tests.item_at_nest(sim, r, nest_location, nest_size)
 		Cmd(speed=n/r.weight, dir_=dir_movement).exec(r)
 
-	#End for
+		#Update lof if successfully collected
+		bool_collected_after = sim_tests.item_at_nest(sim, r, nest_location, nest_size)
+		num_collected += bool_collected_before or bool_collected_after	
+		if bool_collected_after and not bool_collected_before:
+			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed)+": New resource collected"
+			collected_new = True
 
+	#End for
+	if collected_new:
+		EVENT_LOG += "\nNum collected: "+str(num_collected)+" of "+str(num_resources)
+	
+
+	#DEBUG:
+	if not sim.time_elapsed % 100:
+		#print(EVENT_LOG)
+		pass
 	return None
 
 

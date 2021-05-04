@@ -44,3 +44,10 @@ def bots_picking_item(sim, item, pick_up_state=1, thresh_dist = 0.2):
 
 	return bots
 
+def item_at_nest(sim, item, nest_pos, nest_size):
+	p1,p2 = nearest_points(Point(nest_pos), item.polygon)
+	if p2.distance(p1)<nest_size:
+		return True
+	return False
+
+

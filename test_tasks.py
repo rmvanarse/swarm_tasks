@@ -21,7 +21,9 @@ import swarm_tasks.utils.logging as logging
 
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-s = sim.Simulation(num_bots=10, env_name='rectangles')
+#s = sim.Simulation(num_bots=10, env_name='rectangles', contents_file='attractors')
+
+s = sim.Simulation(num_bots=20, env_name='empty_world')
 
 gui = viz.Gui(s)
 gui.show_env()
@@ -30,10 +32,10 @@ gui.show_bots()
 while 1:
 	for b in s.swarm:
 
-		cmd = remcon.remove_contamination(b)
+		cmd = frg.gather_resources(b)
 		cmd.exec(b)
 
-	scenarios.contaminations(s, 0.0002, 40) #0.004 for 20 bots
+	scenarios.movable_resources(s,5)
 
 	gui.update()
 	s.time_elapsed+=1

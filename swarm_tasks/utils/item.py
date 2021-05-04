@@ -56,7 +56,7 @@ class Nest(Attractor):
 		super().__init__(Point(*position).buffer(radius))
 		self.subtype = 'nest'
 		self.pos = position
-
+		self.radius = radius
 
 
 class Contamination(Attractor):
@@ -79,7 +79,6 @@ class Contamination(Attractor):
 		self.radius += increment*rate/(self.radius**2)
 		self.polygon = self.pos.buffer(self.radius)
 		#print(self.radius)
-
 
 
 class Resource(Attractor):
