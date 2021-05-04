@@ -1,4 +1,9 @@
 import numpy as np
+import random
+
+SEED = 10
+random.seed(SEED)
+np.random.seed(SEED)
 
 import swarm_tasks.utils
 

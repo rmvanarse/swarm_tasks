@@ -22,7 +22,6 @@ import swarm_tasks.utils.logging as logging
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
 #s = sim.Simulation(num_bots=10, env_name='rectangles', contents_file='attractors')
-
 s = sim.Simulation(num_bots=20, env_name='empty_world')
 
 gui = viz.Gui(s)

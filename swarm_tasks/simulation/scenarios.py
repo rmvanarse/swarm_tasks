@@ -134,7 +134,8 @@ def movable_resources(sim, num_resources):
 	#End for
 	if collected_new:
 		EVENT_LOG += "\nNum collected: "+str(num_collected)+" of "+str(num_resources)
-	
+		if num_collected == num_resources:
+			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed)+": Success! Foraging completed"
 
 	#DEBUG:
 	if not sim.time_elapsed % 100:

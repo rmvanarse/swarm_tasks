@@ -1,6 +1,7 @@
 import sys, yaml, os, time
-
+import swarm_tasks
 import swarm_tasks.utils.robot as robot
+
 
 def log_robot():
 	params = str()
@@ -10,6 +11,7 @@ def log_robot():
 	params += "\nMAX_SPEED: " + str(robot.MAX_SPEED) 
 	params += "\nMAX_ANGULAR: " + str(robot.MAX_ANGULAR) 
 	params += "\nDEFAULT_STATE: " + str(robot.DEFAULT_STATE)
+	params += "\nSEED: " + str(swarm_tasks.SEED)+" #For random & np.random"
 
 	return params+"\n\n"
 
