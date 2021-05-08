@@ -20,14 +20,17 @@ from swarm_tasks.modules import follow
 
 from swarm_tasks.modules import decisions
 
+import swarm_tasks.utils.logging as logging
+
+
 import numpy as np
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
 #s = sim.Simulation(env_name='rectangles', contents_file='clutter')
-s = sim.Simulation(env_name='rectangles')
-
-#s = sim.Simulation(num_bots=15, env_name='rectangles', contents_file='attractors',\
-#	num_initial_states =2)
+#s = sim.Simulation(env_name='empty_world')
+s = sim.Simulation(num_bots=15,env_name='empty_world', contents_file='attractors')
+#s = sim.Simulation(num_bots=20, env_name='rectangles', contents_file='attractors',\
+	#num_initial_states =2)
 
 
 gui = viz.Gui(s)
@@ -38,8 +41,7 @@ gui.show_env()
 gui.show_bots()
 
 #s.swarm[0].set_goal(6,1)
-#grid = np.random.rand(50,50)
-gui.show_grid()
+#gui.show_grid()
 
 i=0
 
@@ -53,7 +55,7 @@ while 1:
 		x,y = b.get_position()
 
 
-		cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
+		#cmd = potf.get_field((b.get_position()),b.sim, goal_set=b.goal_exists(), goal=b.goal)
 		
 
 		"""
@@ -69,24 +71,24 @@ while 1:
 		#FORMATIONS
 		"""
 		#cmd+=circle(b,4)
-		#cmd+=line(b)*3.5
+		cmd+=line(b)
 		"""
 		-------------
 		AGGR/DISP
 		"""
 
-		cmd+= disp_field(b)
-		#cmd+=aggr_centroid(b)*0.15
+		#cmd+= disp_field(b)*0.1
+		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
 
 		#cmd+=aggr_field(b)*0.1
-		#cmd+=surround_attractor(b)*2.5
+		#cmd+=surround_attractor(b)
 		
 		"""
 		------------
 		EXPLORATION
 		"""
-		cmd += exp.explore(b)
+		#cmd += exp.explore(b)
 
 		"""
 		FOLLOW
@@ -103,7 +105,7 @@ while 1:
 		DECISIONS
 		"""
 		#decisions.switch_stoch(b,2, 0.001)
-		decisions.consensus(b)
+		#decisions.consensus(b)
 
 	#if not iter_%100:
 		#gui.show_grid(grid)
@@ -112,11 +114,22 @@ while 1:
 	#s.swarm[0].step()
 	#s.swarm[2].step()
 	#s.swarm[0].turn(0.05)
-	s.update_grid()
-	gui.show_grid()
+	
+
+	#s.update_grid()
+	#gui.show_grid()
+	
 	gui.update()
 	s.time_elapsed+=1
 	i+=1
+
+	#Get & save logs
+	robot_params = logging.log_robot()
+	sim_params = s.get_sim_param_log()
+
+	weight_params = "# WEIGHT PARAMETERS\n\nweight_dicts: default_weight_dicts"
+	logging.save_log([robot_params,sim_params, weight_params], "swarm_tasks/logs/basic_tests", "TEST_PARAMS_LINE-", ext=".yaml")
+
 
 
 gui.run()

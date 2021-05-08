@@ -49,7 +49,7 @@ class Cmd:
 				self.dir-=2*np.pi
 
 			self.vec = np.array([np.cos(self.dir), np.sin(self.dir)])*self.speed
-			self.trunc(VEC_MAX)
+			#self.trunc(VEC_MAX)
 	
 	def trunc(self, max_val):
 		self.vec*=min(max_val/(self.speed+0.00001), 1)

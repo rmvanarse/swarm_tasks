@@ -30,25 +30,23 @@ def save_log(sim):
 #s = sim.Simulation(num_bots=10, env_name='rectangles', contents_file='attractors')
 #s = sim.Simulation(num_bots=20, env_name='empty_world')
 
-s = sim.Simulation(num_bots=10, env_name='rectangles', contents_file='attractors')
+s = sim.Simulation(num_bots=20, env_name='empty_world')
 
 gui = viz.Gui(s)
 gui.show_env()
 gui.show_bots()
-gui.show_grid()
 
 while 1:
 	for b in s.swarm:
 
-		cmd = cvg.disp_exp_area_cvg(b)
+		cmd = frg.gather_resources(b)
 		cmd.exec(b)
 
-	s.update_grid()
-	gui.show_grid()
+	scenarios.movable_resources(s,5)
+
 	gui.update()
 	s.time_elapsed+=1
 
-	save_log(s)
 gui.run()
 
 
