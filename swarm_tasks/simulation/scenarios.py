@@ -149,6 +149,8 @@ def movable_resources(sim, num_resources):
 	return None
 
 
+#TODO: Log update: periodic area coverage %check
+
 
 def get_event_log():
 	return EVENT_LOG

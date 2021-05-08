@@ -1,0 +1,11 @@
+NEIGHBOURHOOD_RADIUS: 4.5
+
+#Base control
+obstacle_avoidance:
+	bots: 1.0
+	obstacles: 0.3
+	borders: 0.3
+	goal: 0.0
+	items: 0.1
+
+#Default weight_dicts can be found in swarm_tasks/logs/default_weight_dicts.yaml

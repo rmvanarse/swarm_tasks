@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-SEED = 20
+SEED = 42
 random.seed(SEED)
 np.random.seed(SEED)
 

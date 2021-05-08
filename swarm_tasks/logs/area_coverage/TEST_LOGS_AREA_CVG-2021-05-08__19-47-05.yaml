@@ -1,0 +1,20 @@
+# ROBOT PARAMETERS
+
+DEFAULT_NEIGHBOURHOOD_VAL: 6
+DEFAULT_SIZE: 0.4
+MAX_SPEED: 1.5
+MAX_ANGULAR: 1
+DEFAULT_STATE: 0
+SEED: 42 #For random & np.random
+
+
+# SIMULATION PARAMETERS
+
+size: (20, 20)
+num_bots: 10
+env_name: rectangles
+contents_name: attractors
+
+
+EVENT_LOG
+

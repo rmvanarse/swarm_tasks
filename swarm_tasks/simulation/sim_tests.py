@@ -51,3 +51,4 @@ def item_at_nest(sim, item, nest_pos, nest_size):
 		return False
 
 
+#TODO: Area coverage %check
