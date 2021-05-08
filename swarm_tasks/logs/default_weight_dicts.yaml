@@ -1,0 +1,46 @@
+# DEFAULT WEIGHT_DICTS FOR CONTROLLERS
+
+get_field:
+	bots: 1.0
+	obstacles: 1.0
+	borders: 1.0
+	goal: -3.0
+	items: 0.0
+
+base_control:
+	bots: 1.0
+	obstacles: 1.0
+	borders: 1.0
+	goal: -3.0
+	items: 0.0
+
+obstacle_avoidance:
+	bots: 1.0
+	obstacles: 1.0
+	borders: 0.5
+	goal: -3.0
+	items: 0.005
+
+
+# DEFAULT WEIGHT_DICTS FOR MODULES
+
+disp_field:
+	bots: 3.0
+	obstacles: 0.5
+	borders: 0.5
+	goal: 0.0
+	items: 1.0
+	
+aggr_field:
+	bots: -0.5
+	obstacles: 0.0 
+	borders: 0.0
+	goal: 0.0
+	items: 0.0
+	
+surround_attractor:
+	bots: 0.0
+	obstacles: 0.0
+	borders: 0.0
+	goal: 0.0
+	items: -4.0

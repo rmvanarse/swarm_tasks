@@ -1,0 +1,27 @@
+# WEIGHT_DICTS IN FORAGING:
+
+#In additional base control - In obstacle_avoidance():
+
+DEFAULT:
+	bots: 1.0
+	obstacles: 1.0
+	borders: 2.0
+	goal: -3.0
+	items: 1.0
+
+STATE_DEPLOY:
+	bots: 1.0
+	obstacles: 1.0
+	borders: 2.0
+	goal: -3.0
+	items: 0.0
+	
+STATE_ENDPOINT:
+	bots: 3.0
+	obstacles: 1.0
+	borders: 2.0
+	goal: -3.0
+	items: 0.0
+	
+#All remaining weight dicts are default
+#Default weight_dicts are listed in swarm_tasks/logs/default_weight_dicts.yaml

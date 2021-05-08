@@ -1,0 +1,4 @@
+NEIGHBOURHOOD_RADIUS: 4
+
+#Base control uses default parameters
+#Default weight_dicts can be found in swarm_tasks/logs/default_weight_dicts.yaml
