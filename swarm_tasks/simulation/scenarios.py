@@ -46,7 +46,7 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 		if c.subtype != 'contamination':
 			continue
 		c.update(min_containment_bots-sim_tests.num_bots_around_item(sim, c, 1))
-		if c.radius < 0.4:
+		if c.radius < utils.robot.DEFAULT_SIZE+0.05:
 			EVENT_LOG += "\nSim time:"+str(sim.time_elapsed) +": Contamination removed at " +str(c.pos)
 			sim.contents.items.remove(c)
 			print("ITEM REMOVED\nNum items: ", len(sim.contents.items))

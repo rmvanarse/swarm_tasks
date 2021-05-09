@@ -1,0 +1,15 @@
+# WEIGHT_DICTS IN CONTAMINATION REMOVAL:
+
+#In additional base control - In obstacle_avoidance():
+
+BASE_CONTROL:
+	bots: 1.0
+	obstacles: 0.5
+	borders: 0.5
+	goal: -3.0
+	items: 0.25
+
+
+	
+#All remaining weight dicts are default
+#Default weight_dicts are listed in swarm_tasks/logs/default_weight_dicts.yaml

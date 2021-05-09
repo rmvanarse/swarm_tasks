@@ -78,7 +78,7 @@ def remove_contamination(bot, use_base_control=True,\
 	if(use_base_control):
 		cmd += base_control.base_control(bot)*0.5
 		#ADD FIELD WEIGHT FOR ITEMS: REDUCE MIN DIST,INCREASE FIELD
-		field_weights={'bots':1.1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':0.25}
+		field_weights={'bots':1.0, 'obstacles':0.5, 'borders':0.5, 'goal':-3, 'items':0.25}
 		cmd += base_control.obstacle_avoidance(bot, field_weights)
 
 

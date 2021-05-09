@@ -1,0 +1,29 @@
+# ROBOT PARAMETERS
+
+DEFAULT_NEIGHBOURHOOD_VAL: 6
+DEFAULT_SIZE: 0.4
+MAX_SPEED: 1.5
+MAX_ANGULAR: 1
+DEFAULT_STATE: 0
+SEED: 10 #For random & np.random
+
+
+# SIMULATION PARAMETERS
+
+size: (20, 20)
+num_bots: 15
+env_name: rectangles
+contents_name: None
+
+
+EVENT_LOG
+SCENARIO: RANDOM GROWING CONTAMIATIONS
+prob_new: 0.003
+contamination growth rate: 3
+contamination removal rate: 1.0 per robot
+
+Sim time:40: New contamination at [18.99419513 10.99407433]
+Sim time:81: New contamination at [10.37573576  3.88623655]
+Sim time:181: Contamination removed at POINT (10.37573576425479 3.886236553519387)
+Sim time:322: Contamination removed at POINT (18.9941951262807 10.99407432596496)
+Sim time:322: Sim Success. All present contaminations removed.

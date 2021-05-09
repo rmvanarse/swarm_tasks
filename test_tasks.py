@@ -42,10 +42,12 @@ while 1:
 		cmd = remcon.remove_contamination(b)
 		cmd.exec(b)
 
-	scenarios.contaminations(s, 0.003, 40) #0.004 for 20 bots
+	scenarios.contaminations(s, 0.0025, 40) #0.004 for 20 bots
 
 	gui.update()
 	s.time_elapsed+=1
+
+	save_log(s) #Add this in the while loop
 
 gui.run()
 
