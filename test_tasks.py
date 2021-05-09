@@ -23,14 +23,14 @@ def save_log(sim):
 	robot_params = logging.log_robot()
 	sim_params = sim.get_sim_param_log()
 	event_logs = scenarios.get_event_log()
-	logging.save_log([robot_params,sim_params,event_logs], "swarm_tasks/logs", "TEST_LOGS_AREA_CVG-", ext=".yaml")
+	logging.save_log([robot_params,sim_params,event_logs], "swarm_tasks/logs", "TEST_LOGS_CONT_RM-", ext=".yaml")
 
 
 #s = sim.Simulation(env_name='empty_world', contents_file='attractors')
 #s = sim.Simulation(num_bots=10, env_name='rectangles', contents_file='attractors')
 #s = sim.Simulation(num_bots=20, env_name='empty_world')
 
-s = sim.Simulation(num_bots=20, env_name='empty_world')
+s = sim.Simulation(num_bots=15, env_name='rectangles')
 
 gui = viz.Gui(s)
 gui.show_env()
@@ -39,10 +39,10 @@ gui.show_bots()
 while 1:
 	for b in s.swarm:
 
-		cmd = frg.gather_resources(b)
+		cmd = remcon.remove_contamination(b)
 		cmd.exec(b)
 
-	scenarios.movable_resources(s,5)
+	scenarios.contaminations(s, 0.003, 40) #0.004 for 20 bots
 
 	gui.update()
 	s.time_elapsed+=1

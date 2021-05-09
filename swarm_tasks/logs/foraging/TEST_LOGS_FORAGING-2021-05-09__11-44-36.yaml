@@ -1,0 +1,36 @@
+# ROBOT PARAMETERS
+
+DEFAULT_NEIGHBOURHOOD_VAL: 12
+DEFAULT_SIZE: 0.4
+MAX_SPEED: 1.5
+MAX_ANGULAR: 1
+DEFAULT_STATE: 0
+SEED: 20 #For random & np.random
+
+
+# SIMULATION PARAMETERS
+
+size: (20, 20)
+num_bots: 20
+env_name: empty_world
+contents_name: None
+
+
+EVENT_LOG
+SCENARIO: FORAGING/ RESOURCE GATHERING
+num_resources: 5
+Nest: (1.5, 1.5) size=3
+Resource 1: [8.56157045 7.90130363] size=0.9223148570737428
+Resource 2: [ 8.49088953 13.25609686] size=0.7079714790037741
+Resource 3: [ 3.79551851 14.44957302] size=0.6268304864511354
+Resource 4: [7.09990901 1.6927661 ] size=0.9033983486838606
+Resource 5: [4.75146775 9.23849563] size=0.5047963853916996
+Sim time:1586: New resource collected
+Num collected: 2 of 5
+Sim time:2657: New resource collected
+Num collected: 3 of 5
+Sim time:2660: New resource collected
+Num collected: 4 of 5
+Sim time:3448: New resource collected
+Num collected: 5 of 5
+Sim time: 3448: Success! Foraging completed

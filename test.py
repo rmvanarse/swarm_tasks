@@ -70,8 +70,8 @@ while 1:
 		------------
 		#FORMATIONS
 		"""
-		#cmd+=circle(b,4)
-		cmd+=line(b)
+		cmd+=circle(b,4)
+		#cmd+=line(b)
 		"""
 		-------------
 		AGGR/DISP
@@ -128,7 +128,7 @@ while 1:
 	sim_params = s.get_sim_param_log()
 
 	weight_params = "# WEIGHT PARAMETERS\n\nweight_dicts: default_weight_dicts"
-	logging.save_log([robot_params,sim_params, weight_params], "swarm_tasks/logs/basic_tests", "TEST_PARAMS_LINE-", ext=".yaml")
+	logging.save_log([robot_params,sim_params, weight_params], "swarm_tasks/logs/basic_tests", "TEST_PARAMS_CIRCLE-", ext=".yaml")
 
 
 
