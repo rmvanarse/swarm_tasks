@@ -25,10 +25,10 @@ import swarm_tasks.utils.logging as logging
 
 import numpy as np
 
-#s = sim.Simulation(env_name='empty_world', contents_file='attractors')
-#s = sim.Simulation(env_name='rectangles', contents_file='clutter')
+s = sim.Simulation(env_name='empty_world', contents_file='attractors')
+#s = sim.Simulation(env_name='rectangles', contents_file='attractors')
 #s = sim.Simulation(env_name='empty_world')
-s = sim.Simulation(num_bots=15,env_name='empty_world', contents_file='attractors')
+#s = sim.Simulation(num_bots=15,env_name='empty_world', contents_file='attractors')
 #s = sim.Simulation(num_bots=20, env_name='rectangles', contents_file='attractors',\
 	#num_initial_states =2)
 
@@ -77,7 +77,7 @@ while 1:
 		AGGR/DISP
 		"""
 
-		#cmd+= disp_field(b)*0.1
+		#cmd+= disp_field(b)*0.05
 		#cmd+=aggr_centroid(b)
 		#cmd+=aggr_field(b)
 
@@ -128,7 +128,7 @@ while 1:
 	sim_params = s.get_sim_param_log()
 
 	weight_params = "# WEIGHT PARAMETERS\n\nweight_dicts: default_weight_dicts"
-	logging.save_log([robot_params,sim_params, weight_params], "swarm_tasks/logs/basic_tests", "TEST_PARAMS_CIRCLE-", ext=".yaml")
+	#logging.save_log([robot_params,sim_params, weight_params], "swarm_tasks/logs/basic_tests", "TEST_PARAMS_CIRCLE-", ext=".yaml")
 
 
 

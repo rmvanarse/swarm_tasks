@@ -16,7 +16,7 @@ from swarm_tasks.tasks import remove_contamination as remcon
 import numpy as np
 
 
-s = sim.Simulation(num_bots=10, env_name='rectangles')
+s = sim.Simulation(num_bots=15, env_name='rectangles')
 
 gui = viz.Gui(s)
 gui.show_env()
@@ -28,7 +28,7 @@ while 1:
 		cmd = remcon.remove_contamination(b)
 		cmd.exec(b)
 
-	scenarios.contaminations(s, 0.0002, 40) #0.004 for 20 bots
+	scenarios.contaminations(s, 0.0025, 40) #0.004 for 20 bots
 
 	gui.update()
 	s.time_elapsed+=1
