@@ -1,5 +1,8 @@
-print("This is a backup script. Please use test_tasks.py or Examples")
-exit()
+print("Running foraging example 1\nUsing source files for package imports\nPARAMETERS:")
+import sys,os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'../../..')))
+print(sys.path)
 
 import swarm_tasks
 
