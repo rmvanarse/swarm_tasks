@@ -16,7 +16,8 @@ class Simulation:
 		num_bots=15,\
 		initialization='random',\
 		num_initial_states = 1,\
-		contents_file=None):
+		contents_file=None,\
+		init_neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL):
 
 		#Load world into self.env
 		if env_name==None:
@@ -52,7 +53,9 @@ class Simulation:
 		#Populate world with robots
 		self.swarm = []
 		self.num_initial_states = num_initial_states
-		self.num_bots = self.populate(num_bots, initialization, self.num_initial_states)
+		self.nr = init_neighbourhood_radius
+		self.num_bots = self.populate(num_bots, initialization, \
+									self.num_initial_states,self.nr)
 
 		#Other instance variables:
 		self.time_elapsed = 0	#Number of iterations
@@ -62,12 +65,14 @@ class Simulation:
 		print("Initialized simulation with "+str(self.num_bots)+" robots")
 		
 
-	def populate(self, n, initialization, num_states):
+	def populate(self, n, initialization, num_states, nr):
 		"""
 		Populates the simulation by spawning Bot objects
 		Args:
 			n:	number of robots
 			initialization
+			num_states
+			nr: neighbourhood radius of the bots
 		Returns:
 			size of final swarm (self.swarm)
 		"""
@@ -87,7 +92,7 @@ class Simulation:
 				if self.check_free(x,y,utils.robot.DEFAULT_SIZE):
 					break
 
-			self.swarm.append(utils.robot.Bot(x,y,theta, state=state))
+			self.swarm.append(utils.robot.Bot(x,y,theta, state=state, neighbourhood_radius=nr))
 		
 		for bot in self.swarm:
 			bot.set_sim(self)

@@ -6,6 +6,16 @@ print(sys.path)
 
 import swarm_tasks
 
+#Set demo parameters directly
+import numpy as np
+import random
+swarm_tasks.utils.robot.DEFAULT_NEIGHBOURHOOD_VAL = 6
+swarm_tasks.utils.robot.DEFAULT_SIZE= 0.4
+swarm_tasks.utils.robot.MAX_SPEED = 1.5
+swarm_tasks.utils.robot.MAX_ANGULAR: 0.3
+np.random.seed(42)
+random.seed(42)
+
 from swarm_tasks.simulation import simulation as sim
 from swarm_tasks.simulation import visualizer as viz
 	

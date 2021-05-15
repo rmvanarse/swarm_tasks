@@ -1,10 +1,21 @@
-print("Running foraging example 1\nUsing source files for package imports\nPARAMETERS:")
+print("Running cont_rem example 1\nUsing source files for package imports\nPARAMETERS:\
+	Using default hardcoded parameters (listed in swarm_tasks/logs)")
 import sys,os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__),'../../..')))
 print(sys.path)
 
 import swarm_tasks
+
+#Set demo parameters directly
+import numpy as np
+import random
+swarm_tasks.utils.robot.DEFAULT_NEIGHBOURHOOD_VAL = 6
+swarm_tasks.utils.robot.DEFAULT_SIZE= 0.4
+swarm_tasks.utils.robot.MAX_SPEED = 1.5
+swarm_tasks.utils.robot.MAX_ANGULAR: 1
+np.random.seed(42)
+random.seed(42)
 
 from swarm_tasks.simulation import simulation as sim
 from swarm_tasks.simulation import visualizer as viz
