@@ -4,6 +4,9 @@ from shapely.geometry import Point, Polygon
 
 
 class Item:
+	"""
+	Parent class for all items
+	"""
 	def __init__(self, polygon):
 		self.polygon = polygon #May need only dimensions
 		self.type = None
@@ -18,12 +21,18 @@ class Item:
 		return p.x, p.y
 
 class Attractor(Item):
+	"""
+	Item type used for surround/perimeter behaviour
+	"""
 	def __init__(self, polygon):
 		super().__init__(polygon)
 		self.type = 'attractor'
 	
 
 class Clutter(Item):
+	"""
+	Movable items
+	"""
 	def __init__(self, polygon, weight):
 		super().__init__(polygon)
 		self.type = 'clutter'
@@ -37,8 +46,8 @@ class Clutter(Item):
 
 	def move(self, translation, rotation):
 		"""
-		*** REPLAN THIS ***
-		*** WILL CONFLICT WITH move() FROM OTHER CHILDREN CLASSES ***
+		*** NOT IMPLEMENTED ***
+		*** MAY CONFLICT WITH move() FROM OTHER CHILDREN CLASSES ***
 
 		Translation: 2d vector 
 		Rotation: angle
@@ -46,7 +55,11 @@ class Clutter(Item):
 		#Use poly = shapely.affinity.<rot/translate>(poly)
 		pass
 
+
 class Nest(Attractor):
+	"""
+	Area for storing gathered resources in foraging
+	"""
 	def __init__(self, position, radius):
 		"""
 		Args:
@@ -60,6 +73,11 @@ class Nest(Attractor):
 
 
 class Contamination(Attractor):
+	"""
+	Used in contamination removal scenarios
+	Contamination begins at a hotspot and grows in all directions
+	Robots at the perimeter can slow down/reduce the spread
+	"""
 	def __init__(self, position, radius):
 		"""
 		Args:
@@ -82,6 +100,12 @@ class Contamination(Attractor):
 
 
 class Resource(Attractor):
+	"""
+	Movable circular items
+	Used in resource gathering & foraging
+	Weight of the item depends on its area
+	Difficulty of moving the item depends on its weight
+	"""
 	def __init__(self, position, radius=0.5, density=1):
 		"""
 		Movable resource, for forraging/gathering
@@ -114,6 +138,7 @@ class Resource(Attractor):
 
 
 	def deplete(self, decrement=1, rate = 0.1):
+		#'Consume' the item 
 		#Not in use yet
 		#Similar to contam update() method
 		self.radius -= decrement*rate/(self.radius**2)

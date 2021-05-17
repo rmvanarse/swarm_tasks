@@ -8,8 +8,11 @@ def surround_attractor(bot, \
 			order=1):
 	"""
 	Surrounds an attractor item within the neighbourhood radius
-	ToDo: Tuning
 	Order = 1 is default because the nearest attractor should be given priority
+	Extra close range potential field prevents collision with the attractor and 
+	prevents the robot from getting stuck
+	
+	Returns: Cmd for forming a perimeter around the item
 	"""
 	cmd = potf.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \

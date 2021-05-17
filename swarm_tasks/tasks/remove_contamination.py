@@ -61,7 +61,7 @@ def remove_contamination(bot, use_base_control=True,\
 		if len(neighbours_rush)>0:
 			cmd+= follow_leader(bot, neighbours_rush[0])*3
 			if use_follow_state:
-				bot.set_state(STATE_FOLLOW) #DEBUG
+				bot.set_state(STATE_FOLLOW) 
 		
 		elif len(neighbours_follow)>0:
 			cmd+= follow_leader(bot, neighbours_follow[0])*3

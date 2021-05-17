@@ -12,8 +12,10 @@ def linear_trunc(t, initial_val=0.0, final_val=1.0, rate=0.001):
 	min_lin, max_lin = min(initial_val, final_val), max(initial_val, final_val)
 	return max(min(lin, max_lin), min_lin)
 
+
 def sinusoidal(t, trough=0.0, crest=1.0, rate=0.01):
 	return trough + (crest-trough)*(np.sin(rate*t-np.pi/2)+1)/2
+
 
 def triangular(t, trough=0.0, crest=1.0, rate=0.001):
 	rel_t = t%int(1/rate)

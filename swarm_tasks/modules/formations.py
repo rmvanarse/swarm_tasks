@@ -8,6 +8,12 @@ def circle(bot, radius,\
 	neighbours = bot.neighbours(neighbourhood_radius)
 	num_neighbours = len(neighbours)
 	
+	"""
+	Circle formation
+	The robot moves towards a point at a fixed distance from the centroid of neighbours
+	(high neighbourhood value recommended)
+	Returns: Cmd for circle formation
+	"""
 	if not num_neighbours:
 		"""
 		Enhancement:
@@ -15,6 +21,7 @@ def circle(bot, radius,\
 		"""
 		return controllers.command.Cmd(speed=0, dir_=0)
 
+	#Iterate through neighbours and find centroid
 	centroid = (0,0)
 	for n in neighbours:
 		x,y = n.get_position()
@@ -23,6 +30,7 @@ def circle(bot, radius,\
 
 	centroid = (centroid[0]/num_neighbours, centroid[1]/num_neighbours)
 
+	#Get direction of motion
 	x0, y0 = bot.get_position()
 	dir_vec = np.array([centroid[0]-x0, centroid[1]-y0])
 	dir_vec/=np.linalg.norm(dir_vec)
@@ -70,7 +78,7 @@ def line(bot, neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL,\
 	C = np.ones(X.shape)
 	A = np.vstack([X,C]).T#.reshape(num_neighbours,2)
 
-
+	#Perform linear regression
 	m,c = np.linalg.lstsq(A,Y, rcond=None)[0]
 	#print(m,c)
 

@@ -10,16 +10,19 @@ def consensus(bot, include_self=True,\
 	in its neighbourhood
 	Returns true if the state is switched
 	"""
+	#Get neighbours
 	neighbours = bot.neighbours(neighbourhood_radius)
 	if include_self:
 		neighbours.append(bot)
 
+	#Count states
 	states = [b.get_state() for b in neighbours]
 	state_count = [0]*(max(states)+1)
 
 	for s in states:
 		state_count[s]+=1
 
+	#Get new state
 	new_state = np.argmax(state_count)
 	switch_b = not (bot.get_state()==new_state)
 	

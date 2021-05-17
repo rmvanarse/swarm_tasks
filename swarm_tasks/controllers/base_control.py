@@ -7,7 +7,12 @@ def base_control(bot, \
 			field_weights={'bots':1, 'obstacles':1, 'borders':1, 'goal':-3, 'items':0},\
 			order=2):
 	"""
-	ToDo: Tuning
+	For keeping the overall trajectory smooth and away from obstacles
+	Args:
+		- bot
+		- field_weights
+		- order: Inverse square law by default. Low order recommended
+	Returns: Cmd object (direction & speed)
 	"""
 	cmd = potf.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \
@@ -21,7 +26,13 @@ def obstacle_avoidance(bot, \
 			field_weights={'bots':1, 'obstacles':1, 'borders':0.5, 'goal':-3, 'items':0.05},\
 			order=4, k=3):
 	"""
-	ToDo: Tuning
+	For close range obstacle avoidance
+	Args:
+		- bot
+		- field_weights
+		- order: High order recommended
+		- k: Multiplier
+	Returns: Cmd object (direction & speed)
 	"""
 	cmd = potf.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \

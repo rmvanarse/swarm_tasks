@@ -8,12 +8,14 @@ Each env is stored as a yaml file listing size & obstacles
 Loader will load the shapely polygon array in an World object
 """
 
+#Relative paths (May cause complications while running from different folders)
 envs_path = os.path.dirname(os.path.abspath(__file__))
 worlds_path = os.path.join(envs_path, 'worlds')
 
 class World:
 	"""
-	
+	An instance of this is loaded in th simulation
+	A world is defined using dimensions and a list of obstcles
 	"""
 	def __init__(self, size=(20,20), obstacles=[], filename = None):
 

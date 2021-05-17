@@ -9,7 +9,7 @@ DEFAULT_STATE=0
 
 class Bot:
 	"""
-	(Update)
+	Robot class
 	"""
 	def __init__(self, x, y, theta=0,\
 		state=DEFAULT_STATE,\
@@ -21,6 +21,7 @@ class Bot:
 
 		#TODO: Bot ID 
 
+		#Basic attributes
 		self.x = x
 		self.y = y
 		self.theta = theta
@@ -42,9 +43,7 @@ class Bot:
 		#For exploration
 		self.explore_dir = np.pi*(2*np.random.rand()-1)
 
-		#Add to sim?
-
-	
+			
 	def dist(self, x, y):
 		"""
 		Returns the distance of the centre of the robot
@@ -54,11 +53,12 @@ class Bot:
 
 	def neighbours(self, radius=None, single_state=False, state=None):
 		"""
-		Returns the a list of neighbours
+		Returns: List of neighbours
+		Args:
+			radius: Neighbourhood radius to use (default: self.neighbourhood_radius)
+			single_state: If true, then return only neighbours of the given state
 
-		If sengle_state is true, then return only neighbours of the given state
-
-		Enhancement:
+		(TODO) Enhancement:
 		(2) Include self
 		"""
 		if radius == None:

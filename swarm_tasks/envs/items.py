@@ -5,17 +5,17 @@ from shapely.geometry import Polygon
 
 import swarm_tasks.utils.item as ex
 
-"""
-How are items stored and loaded??
-"""
-
+#Relative paths (May cause complications while running from different folders)
 envs_path = os.path.dirname(os.path.abspath(__file__))
 items_path = os.path.join(envs_path, 'items')
 
 
 class Contents:
 	"""
-	
+	Class for all extra contents of a simulation
+	(Currently contains only "items")
+
+	Each item is an object of a type specified in utils.item
 	"""
 	def __init__(self, items=[], filename=None):
 		if filename!=None:
@@ -25,9 +25,10 @@ class Contents:
 
 	def load_items(self, filename):
 		"""
-		Possible implementations:
-		1. [N] Each item is a polygon ==> Other implementations similar to obstacles
-		2. [Y] Each item is an object ==> Properties like item.identity
+		Load items from yaml files and
+		Note: Item types are hardcoded. New types will need to be added explicitly
+
+		Returns: List of items
 
 		"""
 		f = open(filename)

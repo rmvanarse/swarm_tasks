@@ -8,7 +8,17 @@ def disp_field( bot,\
 			neighbourhood_radius = utils.robot.DEFAULT_NEIGHBOURHOOD_VAL,\
 			item_types=[]):
 	"""
-	ToDo: Tune parameters
+	The robots disperse away from one another and settle down nearly equidistantly
+	Uses potential field with a repulsive force from bots, obstacles & items
+	The field is defined by a reciprocal law
+
+	Args:
+	 - bot
+	 - neighbourhood_radius
+	 - field_weights: (Highest weight given to robots by defaul, then to obstacles/items)
+	 - item_types: Used if dispersion from a specific subset of neighbours is intended
+	 				(All neighbours used if list is empty)
+	Returns: Cmd for dispersion
 	"""
 	cmd = controllers.potential_field.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \

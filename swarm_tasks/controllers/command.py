@@ -17,7 +17,7 @@ Control functions for tasks, PID, etc. will add to low-range potential field
 
 """
 
-VEC_MAX = robot.MAX_SPEED*3.5
+VEC_MAX = robot.MAX_SPEED*3.5	#For truncation
 
 class Cmd:
 	"""
@@ -52,11 +52,13 @@ class Cmd:
 			#self.trunc(VEC_MAX)
 	
 	def trunc(self, max_val):
+		#Trucate output (Not in use)
 		self.vec*=min(max_val/(self.speed+0.00001), 1)
 		self.speed = min(self.speed, max_val)
 		
 
 	def exec(self, bot):
+		#Execute the command on a robot
 		bot.move(self.dir, self.speed)
 
 	def __add__(self, cmd):

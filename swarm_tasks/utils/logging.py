@@ -2,6 +2,9 @@ import sys, yaml, os, time
 import swarm_tasks
 import swarm_tasks.utils.robot as robot
 
+"""
+Automatically creating and saving logs
+"""
 
 def log_robot():
 	params = str()
@@ -16,6 +19,8 @@ def log_robot():
 	return params+"\n\n"
 
 save_path = None
+
+
 def save_log(logs, path, name, ext=".yaml"):
 	#Log list is an array
 	#Also join time to name

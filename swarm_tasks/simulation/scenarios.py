@@ -15,6 +15,16 @@ EVENT_LOG = "EVENT_LOG\n"
 log_flag = False
 
 def contaminations(sim, prob_new=0.0002, wait_time=20):
+	"""
+	Used in contamination removal task
+
+	Scenario:
+		- Contaminations can spawn at random locations with probability prob_new
+		- The contaminations keep growing at a fixed rate (area)
+		- Robots can 'absorb' or 'neutralize' the contaminant
+		- Each robot has a fixed rate of neutralization (default: 1/3 of growth rate)
+
+	"""
 	#Create event log for the first call
 	global EVENT_LOG, log_flag
 	min_containment_bots = 3
@@ -64,6 +74,17 @@ def contaminations(sim, prob_new=0.0002, wait_time=20):
 
 
 def movable_resources(sim, num_resources):
+
+	"""
+	Used in foraging and resource gathering tasks
+
+	Scenario:
+		- Circular resources of random size are spawned at random locations
+		- Optionally, a NEST exists at a fixed location
+		- Robots can 'attach' to the resources and steer/ move them
+		- Speed of movement depends on the size of the resource and number or robots
+
+	"""
 	nest_location, nest_size = (1.5,1.5), 3
 
 	if not len(sim.contents.items):

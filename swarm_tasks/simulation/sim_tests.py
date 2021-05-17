@@ -12,7 +12,7 @@ from shapely.ops import nearest_points
 #ITEMS
 
 def num_bots_around_item(sim, item, thresh_dist = 0.2):
-
+	#Count the number of robots surrounding an item
 	count = 0
 
 	for bot in sim.swarm:
@@ -45,6 +45,9 @@ def bots_picking_item(sim, item, pick_up_state=1, thresh_dist = 0.2):
 	return bots
 
 def item_at_nest(sim, item, nest_pos, nest_size):
+	"""
+	Check if the item is at the nest
+	"""
 	if Point(nest_pos).distance(Point(item.pos))<nest_size:
 		return True
 	else:

@@ -5,13 +5,23 @@ import numpy as np
 
 def aggr_centroid(bot,neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL,\
 				single_state=False, state=None):
+	"""
+	The robot moves towards the centroid of its neighbours
+	Args:
+		- bot
+		- neighbourhood_radius
+		- single_state: Set to true if aggrefation is to be performed
+						with neighbours of a fixed state
+		- state: Used with single_state
+	Returns: Cmd for aggregation
+	"""
 
 	neighbours = bot.neighbours(neighbourhood_radius, single_state, state)
 	num_neighbours = len(neighbours)
 	
 	if not num_neighbours:
 		"""
-		Enhancement:
+		(TODO) Enhancement:
 		Can define default behaviour for bots without neighbours
 		"""
 		return controllers.command.Cmd(speed=0, dir_=0)
@@ -35,7 +45,8 @@ def aggr_centroid(bot,neighbourhood_radius=utils.robot.DEFAULT_NEIGHBOURHOOD_VAL
 
 def aggr_field(bot, field_weights = {'bots':-0.5, 'obstacles':0, 'borders':0, 'goal':0}):
 	"""
-	ToDo: Tune parameters
+	Uses potential field with an attractive force from neighbourhood robots
+	Returns: Cmd for aggregation
 	"""
 	cmd = controllers.potential_field.get_field(bot.get_position(), \
 		bot.sim, weights=field_weights, \

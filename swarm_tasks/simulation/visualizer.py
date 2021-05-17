@@ -79,6 +79,9 @@ class Gui:
 		plt.pause(0.0005)
 
 	def remove_artists(self):
+		"""
+		Previous figures need to be removed before updating positions on GUI
+		"""
 		for obj in self.ax.findobj(plt.Circle):
 			obj.remove()
 
@@ -91,6 +94,7 @@ class Gui:
 
 
 	def show_neighbourhood(self, bot, r=None):
+		#Shows the neighbourhood of a robot
 		x,y = bot.get_position()
 		if r == None:
 			r = bot.neighbourhood_radius
