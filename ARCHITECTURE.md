@@ -49,11 +49,15 @@ flowchart LR
 
 ## UAV ids
 
-Skybrush names a UAV from its MAVLink system id. `main.py` uses its own ids
-(`1..N`, in connection order). When they differ, set `id_map` in
-`swarm.jsonc` (Skybrush id → `main.py` id). Ids you do not list pass through
-unchanged. The map is applied to the ids inside `goal`, `split`,
-`specificsplit`, `remove` and `add`.
+Skybrush names a UAV from its MAVLink system id, and so does the swarm: a
+bot's id is its drone's system id. `main.py` sorts the connected drones by
+system id (so connection order and UDP port do not matter), keeps each bot's
+id in `Bot.sysid`, and translates the system ids it receives in `goal`,
+`split`, `specificsplit`, `remove` and `add` into its internal bot positions.
+Its telemetry endpoint reports the same system ids. Every drone needs a
+unique `SYSID_THISMAV`. `id_map` in `swarm.jsonc` (Skybrush id → id sent to
+`main.py`) is only needed if the two ever differ; ids you do not list pass
+through unchanged.
 
 ## Takeoff altitude and loiter
 
@@ -61,9 +65,11 @@ unchanged. The map is applied to the ids inside `goal`, `split`,
   10, remembered between uses). Live sends it as `altitude` in `UAV-TAKEOFF`.
   Without a value the server uses 2.5 m
   (`DEFAULT_TAKEOFF_ALTITUDE_M` in `ext/mavlink/driver.py`).
-- **Hold** now sets **Loiter** mode (`loiter`: ArduCopter mode 5, ArduPlane
-  mode 12) instead of Position Hold. On a quadplane this is the fixed-wing
-  loiter, which circles.
+- **Loiter** (the flag button) sets **Loiter** on a copter (mode 5) and
+  **QLoiter** on a quadplane, so a VTOL hovers instead of circling.
+- **Guided mode** (the arrow button beside it) sends the server's `mode`
+  command with `guided` to every selected UAV. The server maps the name to the
+  right mode number per autopilot (ArduCopter 4, ArduPlane 15).
 
 ## The swarm command set
 
