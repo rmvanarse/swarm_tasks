@@ -1,5 +1,11 @@
 # Swarmbots - Tasks
 
+> This repository also includes a real-vehicle swarm-master process
+> (`main.py`) and a Skybrush-based GCS GUI that commands it over the
+> network. See **[ARCHITECTURE.md](ARCHITECTURE.md)** for how those talk to
+> each other, the full command set, and how to run both sides, or
+> **[USER_MANUAL.md](USER_MANUAL.md)** for how to actually fly the swarm
+> from the GUI once it's running.
 
 The project aims to automate a decentralized swarm of autonomous mobile robots to carry out different tasks, with a focus on motion planning.
 

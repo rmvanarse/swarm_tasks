@@ -77,7 +77,6 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec | None]
         "send_fly_to_target_signal",
         {"target": GPSCoordinate.from_json},
     ),
-    "UAV-HALT": ("send_shutdown_signal", {"transport": TransportOptions.from_json}),
     "UAV-HOVER": ("send_hover_signal", {"transport": TransportOptions.from_json}),
     "UAV-LAND": ("send_landing_signal", {"transport": TransportOptions.from_json}),
     "UAV-MOTOR": (
@@ -94,17 +93,9 @@ UAV_COMMAND_HANDLERS: dict[str, tuple[str, MessageBodyTransformationSpec | None]
         "send_light_or_sound_emission_signal",
         {"duration": divide_by(1000), "transport": TransportOptions.from_json},
     ),
-    "UAV-SLEEP": (
-        "enter_low_power_mode",
-        {"transport": TransportOptions.from_json},
-    ),
     "UAV-TAKEOFF": ("send_takeoff_signal", {"transport": TransportOptions.from_json}),
     "UAV-TEST": ("test_component", None),
     "UAV-VER": ("request_version_info", None),
-    "UAV-WAKEUP": (
-        "resume_from_low_power_mode",
-        {"transport": TransportOptions.from_json},
-    ),
 }
 """Table that maps UAV-related command requests to the names of their corresponding
 handler functions in the UAVDriver_ class. Each such handler takes multiple UAV IDs
@@ -1408,19 +1399,16 @@ async def handle_single_uav_operations(
     "PRM-SET-MANY",
     "UAV-CALIB",
     "UAV-FLY",
-    "UAV-HALT",
     "UAV-HOVER",
     "UAV-LAND",
     "UAV-MOTOR",
     "UAV-PREFLT",
     "UAV-RST",
     "UAV-RTH",
-    "UAV-SLEEP",
     "UAV-SIGNAL",
     "UAV-TAKEOFF",
     "UAV-TEST",
     "UAV-VER",
-    "UAV-WAKEUP",
 )
 async def handle_multi_uav_operations(
     message: FlockwaveMessage, sender: Client, hub: MessageHub

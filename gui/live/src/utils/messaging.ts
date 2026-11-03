@@ -9,7 +9,10 @@ import isNil from 'lodash-es/isNil';
 import mapValues from 'lodash-es/mapValues';
 import values from 'lodash-es/values';
 
-import { showConfirmationDialog } from '~/features/prompt/actions';
+import {
+  showConfirmationDialog,
+  showPromptDialog,
+} from '~/features/prompt/actions';
 import { UAV_SIGNAL_DURATION } from '~/features/settings/constants';
 import { shouldConfirmUAVOperation } from '~/features/settings/selectors';
 import { showNotification } from '~/features/snackbar/actions';
@@ -265,10 +268,50 @@ export const flashLightOnUAVsAndHideFailures = performMassOperation({
   skipConfirmation: true,
 });
 
-export const takeoffUAVs = performMassOperation({
+const takeoffUAVsAtAltitude = performMassOperation<{ altitude?: number }, object>({
   type: 'UAV-TAKEOFF',
   name: 'Takeoff command',
 });
+
+/** Last takeoff altitude the operator entered, offered as the next default. */
+let lastTakeoffAltitude = 10;
+
+/**
+ * Asks for the takeoff altitude (meters above the home position) unless the
+ * caller already supplied one, then sends the takeoff command with it.
+ */
+export const takeoffUAVs: typeof takeoffUAVsAtAltitude = async (uavs, args) => {
+  let altitude = args?.altitude;
+  if (altitude === undefined) {
+    const response = await store.dispatch(
+      showPromptDialog({
+        title: 'Takeoff',
+        message: 'Takeoff altitude above the home position.',
+        initialValues: { altitude: lastTakeoffAltitude },
+        schema: {
+          type: 'object',
+          properties: {
+            altitude: {
+              type: 'number',
+              title: 'Altitude (m)',
+              minimum: 1,
+              maximum: 1000,
+            },
+          },
+          required: ['altitude'],
+        },
+        submitButtonLabel: 'Take off',
+      })
+    );
+    if (!response || typeof response.altitude !== 'number') {
+      return;
+    }
+    altitude = response.altitude;
+    lastTakeoffAltitude = altitude;
+  }
+
+  await takeoffUAVsAtAltitude(uavs, { ...args, altitude });
+};
 
 export const landUAVs = performMassOperation({
   type: 'UAV-LAND',
@@ -277,32 +320,23 @@ export const landUAVs = performMassOperation({
 
 export const positionHoldUAVs = performMassOperation({
   type: 'UAV-HOVER',
-  name: 'Position hold command',
+  name: 'Loiter command',
+});
+
+// The server resolves the mode name per autopilot, so the same "guided"
+// works for copters (mode 4) and for planes/quadplanes (mode 15).
+export const guidedModeUAVs = performMassOperation({
+  type: 'OBJ-CMD',
+  name: 'Guided mode command',
+  mapper: () => ({
+    command: 'mode',
+    args: ['guided'],
+  }),
 });
 
 export const returnToHomeUAVs = performMassOperation({
   type: 'UAV-RTH',
   name: 'Return to home command',
-});
-
-export const shutdownUAVs = performMassOperation({
-  type: 'UAV-HALT',
-  name: 'Shutdown command',
-});
-
-export const resetUAVs = performMassOperation({
-  type: 'UAV-RST',
-  name: 'Reset command',
-});
-
-export const sleepUAVs = performMassOperation({
-  type: 'UAV-SLEEP',
-  name: 'Low-power mode command',
-});
-
-export const wakeUpUAVs = performMassOperation({
-  type: 'UAV-WAKEUP',
-  name: 'Resume from low-power mode command',
 });
 
 export const setColorOnUAVs = performMassOperation({
@@ -407,16 +441,13 @@ type OperationHandler<T extends object = object> = (
 // moveUAVs() and setColor() are not in this map because they require extra args
 const OPERATION_MAP: Record<string, OperationHandler<object>> = {
   flashLight: flashLightOnUAVs,
+  guidedMode: guidedModeUAVs,
   holdPosition: positionHoldUAVs,
   land: landUAVs,
-  reset: resetUAVs,
   returnToHome: returnToHomeUAVs,
-  shutdown: shutdownUAVs,
-  sleep: sleepUAVs,
   takeOff: takeoffUAVs,
   turnMotorsOff: turnMotorsOffForUAVs,
   turnMotorsOn: turnMotorsOnForUAVs,
-  wakeUp: wakeUpUAVs,
 };
 
 /**

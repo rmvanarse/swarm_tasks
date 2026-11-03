@@ -14,7 +14,6 @@ export enum AppSettingsDialogTab {
   DISPLAY = 'display',
   PREFLIGHT = 'preflight',
   SERVER = 'server',
-  THREE_D = 'threeD',
   UAVS = 'uavs',
 }
 
@@ -79,41 +78,6 @@ export type SettingsState = {
 
     /** Sort preference of the UAV list */
     uavListSortPreference: UAVSortKeyAndOrder;
-  };
-
-  // TODO: Find / create proper enums from AFrame for some of these.
-  // (Taking into account the mappings of old values in the selectors?)
-  threeD: {
-    /** Scenery to use in the 3D view */
-    scenery: 'auto' | 'indoor' | 'outdoor';
-
-    /** Lighting conditions to use in the 3D view */
-    lighting: 'light' | 'dark';
-
-    /**
-     * Whether to show grid lines on the ground in 3D view. Values correspond
-     * to the 'grid' setting of aframe-environment-component; currently we
-     * support 'none', '1x1' and '2x2'
-     */
-    grid: 'none' | '1x1' | '2x2';
-
-    /** Rendering quality of the 3D view (low, medium or high) */
-    quality: 'low' | 'medium' | 'hight';
-
-    /** Whether to show the coordinate system axes */
-    showAxes: boolean;
-
-    /** Whether to show the home positions of the UAVs */
-    showHomePositions: boolean;
-
-    /** Whether to show the landing positions of the UAVs */
-    showLandingPositions: boolean;
-
-    /** Whether to show statistics about the rendering in an overlay */
-    showStatistics: boolean;
-
-    /** Whether to show the planned trajectories of the selected UAVs */
-    showTrajectoriesOfSelection: boolean;
   };
 
   localServer: {

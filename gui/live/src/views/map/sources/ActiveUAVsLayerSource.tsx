@@ -305,6 +305,7 @@ class ActiveUAVsLayerSource extends React.Component<ActiveUAVsLayerSourceProps> 
         feature.heading = uav.heading;
       }
 
+      feature.vehicleType = uav.vehicleType;
       feature.status = getSingleUAVStatusLevel(uav);
       feature.labelColor = this.props.labelColor;
       feature.scale = this.props.scale;

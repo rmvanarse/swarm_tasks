@@ -2,7 +2,9 @@ import SortAscending from '@mui/icons-material/ArrowDownward';
 import SortDescending from '@mui/icons-material/ArrowUpward';
 import Check from '@mui/icons-material/Check';
 import Filter from '@mui/icons-material/FilterList';
+import Checkbox from '@mui/material/Checkbox';
 import Chip, { type ChipProps } from '@mui/material/Chip';
+import FormControlLabel from '@mui/material/FormControlLabel';
 import Divider from '@mui/material/Divider';
 import Menu from '@mui/material/Menu';
 import MenuItem, { type MenuItemProps } from '@mui/material/MenuItem';
@@ -27,6 +29,9 @@ import {
 
 import Colors from '~/components/colors';
 import FadeAndSlide from '~/components/transitions/FadeAndSlide';
+import { getSelection } from '~/features/selection/selectors';
+import { clearSelection, selectAllUAVs } from '~/features/selection/slice';
+import { getUAVIdList } from '~/features/uavs/selectors';
 import {
   setSingleUAVListFilter,
   setUAVListSortPreference,
@@ -123,6 +128,19 @@ const useStyles = makeStyles((theme: Theme) => ({
 
     '& div': {
       margin: theme.spacing(0, 0, 0, 0.5),
+    },
+  },
+
+  selectAll: {
+    position: 'absolute',
+    left: theme.spacing(1),
+    top: 0,
+    margin: 0,
+    zIndex: 20,
+    fontFamily: monospacedFont,
+    fontSize: 'small',
+    '& .MuiFormControlLabel-label': {
+      fontSize: 'small',
     },
   },
 
@@ -407,6 +425,10 @@ type SortAndFilterHeaderProps = Readonly<{
   filters: UAVFilter[];
   floating?: boolean;
   layout: UAVListLayout;
+  numberOfSelectedUAVs: number;
+  numberOfUAVs: number;
+  onClearSelection: () => void;
+  onSelectAll: () => void;
   onSetFilter: (filter: Nullable<UAVFilter>) => void;
   onSetSortBy: (sortBy: Partial<UAVSortKeyAndOrder>) => void;
   onToggleSortDirection: () => void;
@@ -418,6 +440,10 @@ const SortAndFilterHeader = ({
   filters,
   floating,
   layout,
+  numberOfSelectedUAVs,
+  numberOfUAVs,
+  onClearSelection,
+  onSelectAll,
   onSetFilter,
   onSetSortBy,
   onToggleSortDirection,
@@ -490,6 +516,27 @@ const SortAndFilterHeader = ({
 
   return (
     <div className={clsx(classes.root, floating && classes.floating)}>
+      <FormControlLabel
+        className={classes.selectAll}
+        label='Select all'
+        control={
+          <Checkbox
+            size='small'
+            checked={numberOfUAVs > 0 && numberOfSelectedUAVs >= numberOfUAVs}
+            indeterminate={
+              numberOfSelectedUAVs > 0 && numberOfSelectedUAVs < numberOfUAVs
+            }
+            disabled={numberOfUAVs === 0}
+            onChange={(_event, checked) => {
+              if (checked) {
+                onSelectAll();
+              } else {
+                onClearSelection();
+              }
+            }}
+          />
+        }
+      />
       <div className={classes.widgets}>
         <Chip
           ref={sortChipRef}
@@ -606,11 +653,15 @@ export default connect(
   (state: RootState) => ({
     filters: getUAVListFilters(state),
     layout: getUAVListLayout(state),
+    numberOfSelectedUAVs: getSelection(state).length,
+    numberOfUAVs: getUAVIdList(state).length,
     sortBy: getEffectiveUAVListSortOrder(state),
     sortOverrideActive: isUAVListSortPreferenceOverridden(state),
   }),
   // mapDispatchToProps
   {
+    onClearSelection: clearSelection,
+    onSelectAll: selectAllUAVs,
     onSetFilter: setSingleUAVListFilter,
     onSetSortBy: setUAVListSortPreference,
     onToggleSortDirection: toggleUAVListSortDirection,

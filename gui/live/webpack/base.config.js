@@ -37,6 +37,10 @@ module.exports = {
 
   devServer: {
     hot: true,
+    // Fixed, not "auto": the Electron app always loads localhost:8080, so a
+    // dev server that quietly moved to 8081 would leave it on the wrong page.
+    // If 8080 is busy, fail instead.
+    port: 8080,
   },
 
   plugins: [

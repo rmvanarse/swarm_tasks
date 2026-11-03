@@ -7,7 +7,6 @@ import Gamepad from '@mui/icons-material/Gamepad';
 import Layers from '@mui/icons-material/Layers';
 import Map from '@mui/icons-material/Map';
 import Place from '@mui/icons-material/Place';
-import ThreeDRotation from '@mui/icons-material/ThreeDRotation';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import type { Workbench } from 'react-flexible-workbench';
@@ -80,13 +79,6 @@ const Sidebar: FunctionComponent<SidebarProps> = ({
             icon={<Map />}
             label={t('view.map')}
             component={moduleComponent('map')}
-          />
-          <Module
-            id='threeDView'
-            icon={<ThreeDRotation />}
-            label={t('view.three-d-view')}
-            component={moduleComponent('three-d-view')}
-            reorderEnabled={false}
           />
           <Module
             id='layers'

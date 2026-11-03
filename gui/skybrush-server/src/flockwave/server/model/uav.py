@@ -1063,6 +1063,7 @@ class UAVDriver(Generic[TUAV], ABC):
         uavs: Sequence[TUAV],
         *,
         scheduled: bool = False,
+        altitude: float | None = None,
         transport: TransportOptions | None = None,
     ):
         """Asks the driver to send a takeoff signal to the given UAVs, each
@@ -1076,6 +1077,8 @@ class UAVDriver(Generic[TUAV], ABC):
             uavs: the UAVs to address with this request
             scheduled: whether the takeoff signal was scheduled earlier and is
                 now issued autonomously by the server
+            altitude: takeoff altitude in meters relative to the home position;
+                ``None`` lets the driver use its default
             transport: transport options for sending the signal
 
         Returns:
@@ -1089,6 +1092,7 @@ class UAVDriver(Generic[TUAV], ABC):
             self._send_takeoff_signal_single,
             getattr(self, "_send_takeoff_signal_broadcast", None),
             scheduled=scheduled,
+            altitude=altitude,
             transport=transport,
         )
 
@@ -1665,6 +1669,7 @@ class UAVDriver(Generic[TUAV], ABC):
         uav: TUAV,
         *,
         scheduled: bool = False,
+        altitude: float | None = None,
         transport: TransportOptions | None = None,
     ) -> None | Awaitable[None]:
         """Asks the driver to send a takeoff signal to a single UAV managed

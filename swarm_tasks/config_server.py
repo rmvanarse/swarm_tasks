@@ -127,7 +127,10 @@ def _telemetry(swarm):
 
     bots = []
     for i in range(len(drones)):
-        bot_id = str(i + 1)
+        # Report the drone's MAVLink system id as its id; swarm-internal bot
+        # ids (position i+1) are only used for the job/removed lookups below.
+        system_ids = getattr(swarm.vehicle, "system_ids", [])
+        bot_id = str(system_ids[i] if i < len(system_ids) else i + 1)
         try:
             drone = drones[i]
             frame = getattr(
@@ -143,7 +146,7 @@ def _telemetry(swarm):
                 (
                     "goal"
                     for entry in goal_jobs
-                    if bot_id in entry.get("ids", ())
+                    if (i + 1) in entry.get("ids", ())
                 ),
                 None,
             )

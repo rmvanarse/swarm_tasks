@@ -98,7 +98,11 @@ def vehicle_cruise_speed_m_s(vehicle, vtype):
             speed = float(raw) / 100.0 if raw is not None else None
     except Exception:
         return None
-    return speed if _plausible(speed, _MIN_PLAUSIBLE_SPEED_M_S, _MAX_PLAUSIBLE_SPEED_M_S) else None
+    return (
+        speed
+        if _plausible(speed, _MIN_PLAUSIBLE_SPEED_M_S, _MAX_PLAUSIBLE_SPEED_M_S)
+        else None
+    )
 
 
 def vehicle_waypoint_radius_m(vehicle, vtype):
@@ -124,7 +128,11 @@ def vehicle_waypoint_radius_m(vehicle, vtype):
             radius = float(raw) / 100.0 if raw is not None else None
     except Exception:
         return None
-    return radius if _plausible(radius, _MIN_PLAUSIBLE_RADIUS_M, _MAX_PLAUSIBLE_RADIUS_M) else None
+    return (
+        radius
+        if _plausible(radius, _MIN_PLAUSIBLE_RADIUS_M, _MAX_PLAUSIBLE_RADIUS_M)
+        else None
+    )
 
 
 _MIN_PLAUSIBLE_BANK_DEG = 5.0
@@ -161,7 +169,16 @@ def vehicle_bank_angle_deg(vehicle, vtype):
             bank = float(raw) / 100.0 if raw is not None else None
     except Exception:
         return None
-    return bank if _plausible(bank, _MIN_PLAUSIBLE_BANK_DEG, _MAX_PLAUSIBLE_BANK_DEG) else None
+    return (
+        bank
+        if _plausible(bank, _MIN_PLAUSIBLE_BANK_DEG, _MAX_PLAUSIBLE_BANK_DEG)
+        else None
+    )
+
+
+def drone_system_id(vehicle):
+    """MAVLink system id of a connected dronekit vehicle."""
+    return int(vehicle._master.target_system)
 
 
 class Vehicles:
@@ -183,6 +200,7 @@ class Vehicles:
         self.speeds = [None] * len(conn_str)
         self.radii = [None] * len(conn_str)
         self.bank_angles = [None] * len(conn_str)
+        self.system_ids = []
         self.connect_all()
 
     def get_positions(self, geoToCart, origin, endDistance):
@@ -230,26 +248,40 @@ class Vehicles:
         # the rest of the system already treats len(self.drones) as
         # the swarm size -- main.py passes it straight through as
         # num_bots.
+        #
+        # Bots are then ordered by the drone's MAVLink system id, so bot
+        # position N-1 is the Nth lowest system id (which IS system id N
+        # for the usual 1..N numbering) no matter which port each drone
+        # happened to connect on. system_ids stays index-aligned with
+        # drones; the sysid<->bot-id translation lives in bot_id_for_sysid()
+        # / sysid_for_bot_id() below.
         paired = [
             (drone, vtype, speed, radius, bank)
             for drone, vtype, speed, radius, bank in zip(
-                self.drones, self.vehicle_types, self.speeds, self.radii,
+                self.drones,
+                self.vehicle_types,
+                self.speeds,
+                self.radii,
                 self.bank_angles,
             )
             if drone is not None
         ]
+        paired.sort(key=lambda p: drone_system_id(p[0]))
         self.drones = [drone for drone, _, _, _, _ in paired]
         self.vehicle_types = [vtype for _, vtype, _, _, _ in paired]
         self.speeds = [speed for _, _, speed, _, _ in paired]
         self.radii = [radius for _, _, _, radius, _ in paired]
         self.bank_angles = [bank for _, _, _, _, bank in paired]
+        self.system_ids = [drone_system_id(drone) for drone in self.drones]
 
         connected = len(self.drones)
         print(f"Number of Drones Connected: {connected}/{len(self.conn_str)}")
 
     def _connect_one(self, index, conn_string):
         try:
-            vehicle = connect(conn_string, heartbeat_timeout=self.heartbeat_timeout)
+            vehicle = connect(
+                conn_string, heartbeat_timeout=self.heartbeat_timeout, source_system=253
+            )
 
             self.drones[index] = vehicle
             vtype = mav_type_to_vehicle_type(vehicle._vehicle_type)
@@ -269,6 +301,18 @@ class Vehicles:
             print(f"Drone {index} failed: no heartbeat ({conn_string})")
         except Exception as e:
             print(f"Drone {index} failed: {e} ({conn_string})")
+
+    def bot_id_for_sysid(self, sysid):
+        """Swarm bot id (1-based position) of the drone with this MAVLink
+        system id. Raises ValueError if no connected drone has it."""
+        try:
+            return self.system_ids.index(int(sysid)) + 1
+        except ValueError:
+            raise ValueError(f"no connected drone with system id {sysid}") from None
+
+    def sysid_for_bot_id(self, bot_id):
+        """MAVLink system id of the drone at this swarm bot id."""
+        return self.system_ids[int(bot_id) - 1]
 
     def Loiter_param(self):
         """Largest WP_LOITER_RAD among the connected drones that actually

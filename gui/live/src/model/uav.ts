@@ -17,6 +17,10 @@ import type { Coordinate3D } from '~/utils/math';
 
 import { GPSFixType } from './enums';
 import type { GPSFix, GPSPosition } from './geography';
+import {
+  debugStringToVehicleType,
+  type SwarmVehicleType,
+} from './swarm-vehicle-type';
 import type { VelocityNED, VelocityXYZ } from './velocity';
 
 /**
@@ -161,6 +165,14 @@ export default class UAV {
     }
 
     return this._debugString;
+  }
+
+  /**
+   * Returns the kind of vehicle as announced by the server in the status
+   * "debug" field, or undefined if not announced.
+   */
+  get vehicleType(): SwarmVehicleType | undefined {
+    return debugStringToVehicleType(this.debugString);
   }
 
   /**

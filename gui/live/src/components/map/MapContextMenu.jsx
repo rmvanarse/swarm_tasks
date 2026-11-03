@@ -14,10 +14,7 @@ import FlightLand from '@mui/icons-material/FlightLand';
 import FlightTakeoff from '@mui/icons-material/FlightTakeoff';
 import Grain from '@mui/icons-material/Grain';
 import Home from '@mui/icons-material/Home';
-import Moon from '@mui/icons-material/NightsStay';
 import PinDrop from '@mui/icons-material/PinDrop';
-import ActionPowerSettingsNew from '@mui/icons-material/PowerSettingsNew';
-import Refresh from '@mui/icons-material/Refresh';
 import Divider from '@mui/material/Divider';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import MenuItem from '@mui/material/MenuItem';
@@ -25,7 +22,6 @@ import PropTypes from 'prop-types';
 import { Translation } from 'react-i18next';
 
 import ContextMenu from '~/components/ContextMenu';
-import Bolt from '~/icons/Bolt';
 import ContentCut from '~/icons/ContentCut';
 import Fence from '~/icons/PlacesFence';
 import { FeatureType } from '~/model/features';
@@ -154,40 +150,7 @@ class MapContextMenu extends React.Component {
                     </ListItemIcon>
                     {t('mapContextMenu.details')}
                   </MenuItem>,
-                  <Divider key='div3' />,
-                  <MenuItem
-                    key='wakeUp'
-                    dense
-                    onClick={this._wakeUpSelectedUAVs}
-                  >
-                    <ListItemIcon>
-                      <Bolt />
-                    </ListItemIcon>
-                    {t('general.commands.powerOn')}
-                  </MenuItem>,
-                  <MenuItem key='sleep' dense onClick={this._sleepSelectedUAVs}>
-                    <ListItemIcon>
-                      <Moon />
-                    </ListItemIcon>
-                    {t('general.commands.sleep')}
-                  </MenuItem>,
-                  <MenuItem key='reset' dense onClick={this._resetUAVs}>
-                    <ListItemIcon>
-                      <Refresh color='secondary' />
-                    </ListItemIcon>
-                    {t('general.commands.reboot')}
-                  </MenuItem>,
-                  <MenuItem
-                    key='shutdown'
-                    dense
-                    onClick={this._shutdownSelectedUAVs}
-                  >
-                    <ListItemIcon>
-                      <ActionPowerSettingsNew color='secondary' />
-                    </ListItemIcon>
-                    {t('general.commands.powerOff')}
-                  </MenuItem>,
-                  <Divider key='div4' />
+                  <Divider key='div3' />
                 );
               }
 
@@ -474,11 +437,6 @@ class MapContextMenu extends React.Component {
     }
   };
 
-  _resetUAVs = (_event, context) => {
-    const { selectedUAVIds } = context;
-    messaging.resetUAVs(selectedUAVIds);
-  };
-
   _returnSelectedUAVs = (_event, context) => {
     const { selectedUAVIds } = context;
     messaging.returnToHomeUAVs(selectedUAVIds);
@@ -498,20 +456,6 @@ class MapContextMenu extends React.Component {
     }
   };
 
-  _sleepSelectedUAVs = (_event, context) => {
-    const { selectedUAVIds } = context;
-    messaging.sleepUAVs(selectedUAVIds);
-  };
-
-  _shutdownSelectedUAVs = (_event, context) => {
-    const { selectedUAVIds } = context;
-    messaging.shutdownUAVs(selectedUAVIds);
-  };
-
-  _wakeUpSelectedUAVs = (_event, context) => {
-    const { selectedUAVIds } = context;
-    messaging.wakeUpUAVs(selectedUAVIds);
-  };
 }
 
 export default MapContextMenu;

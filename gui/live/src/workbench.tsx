@@ -138,11 +138,6 @@ export const componentRegistry: ComponentRegistry = {
     label: 'Locations',
     detachable: true,
   },
-  'three-d-view': {
-    component: views.ThreeDTopLevelView,
-    label: '3D View',
-    feature: 'threeDView',
-  },
   'uav-details': {
     component: views.UAVDetailsPanel,
     label: 'UAV',

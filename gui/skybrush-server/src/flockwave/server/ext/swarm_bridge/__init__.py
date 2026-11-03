@@ -1,13 +1,13 @@
-"""Skybrush server extension that bridges to this project's own main.py
-swarm process: commands go out over UDP in main.py's exact wire format,
-and telemetry comes in by polling main.py's /api/telemetry endpoint.
+"""Skybrush server extension that forwards swarm operations (goal, search,
+split...) from Skybrush Live to this project's main.py over UDP, in main.py's
+exact wire format. Telemetry is not handled here: drones stream MAVLink to the
+server's mavlink extension directly.
 """
 
-from .extension import SwarmBridgeExtension
+from .extension import run
 from .schema import schema
 
-__all__ = ("construct", "dependencies", "description", "schema")
+__all__ = ("dependencies", "description", "run", "schema")
 
-construct = SwarmBridgeExtension
 dependencies = ()
-description = "Bridges to this project's main.py swarm process over UDP (commands) and HTTP (telemetry)"
+description = "Forwards swarm operations from Live to main.py over UDP"

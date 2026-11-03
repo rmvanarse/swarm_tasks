@@ -162,9 +162,6 @@ export default connect(
           dispatch(removeSelectedMissionItems());
         }),
         SELECT_ALL_DRONES: selectAllUAVs,
-        SEND_FLASH_LIGHTS_COMMAND: handlePendingUAVIdThenDispatch(
-          callUAVActionOnSelection('flashLight')
-        ),
         SEND_TAKEOFF_COMMAND: callUAVActionOnSelection('takeOff'),
         SEND_LANDING_COMMAND: callUAVActionOnSelection('land'),
         SEND_POSITION_HOLD_COMMAND: callUAVActionOnSelection('holdPosition'),

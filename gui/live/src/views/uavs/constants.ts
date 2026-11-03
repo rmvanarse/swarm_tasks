@@ -7,9 +7,11 @@
 export const GRID_ITEM_WIDTH = 80;
 
 /**
- * Height of a single row in the grid-based UAV layout.
+ * Height of a single row in the grid-based UAV layout. Tall enough for the
+ * avatar plus the status pill, airspeed pill and battery gauge without the
+ * flex column squashing them together.
  */
-export const GRID_ROW_HEIGHT = 100;
+export const GRID_ROW_HEIGHT = 150;
 
 /**
  * Height of the sort/filter header.

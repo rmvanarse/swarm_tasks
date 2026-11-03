@@ -1324,7 +1324,12 @@ class VirtualUAVDriver(UAVDriver[VirtualUAV]):
         uav.shutdown()
 
     async def _send_takeoff_signal_single(
-        self, uav: VirtualUAV, *, scheduled: bool = False, transport=None
+        self,
+        uav: VirtualUAV,
+        *,
+        scheduled: bool = False,
+        altitude: float | None = None,
+        transport=None,
     ) -> None:
         await sleep(0.2)
         uav.takeoff()

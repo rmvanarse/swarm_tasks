@@ -374,8 +374,9 @@
     "commands": {
       "calibrateCompass": "Calibrate compass",
       "clearLEDColor": "Clear LED color override",
+      "guidedMode": "Guided mode",
       "land": "Land",
-      "positionHold": "Position hold",
+      "positionHold": "Loiter",
       "powerOff": "Power off",
       "powerOn": "Power on",
       "reboot": "Reboot",

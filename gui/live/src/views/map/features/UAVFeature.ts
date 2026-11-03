@@ -14,6 +14,7 @@ import DroneImageError from '~/../assets/img/drone-x-black-error-32x32.png';
 import DroneImageInfo from '~/../assets/img/drone-x-black-info-32x32.png';
 import DroneImageWarning from '~/../assets/img/drone-x-black-warning-32x32.png';
 import { Status } from '~/components/semantics';
+import type { SwarmVehicleType } from '~/model/swarm-vehicle-type';
 
 const droneImages: Record<string, string> = {
   // Non-exhaustive mapping so we cannot type they key as Status
@@ -21,6 +22,27 @@ const droneImages: Record<string, string> = {
   [Status.WARNING]: DroneImageWarning,
   [Status.ERROR]: DroneImageError,
   [Status.CRITICAL]: DroneImageError,
+};
+
+const PLANE_COLORS: Record<string, string> = {
+  [Status.INFO]: '#2196f3',
+  [Status.WARNING]: '#ff9800',
+  [Status.ERROR]: '#f44336',
+  [Status.CRITICAL]: '#f44336',
+};
+
+/**
+ * Builds a fixed-wing silhouette (top view, nose up) as an SVG data URL, with
+ * the body tinted by the status color like the copter images' status dot.
+ */
+const planeImage = (status: string): string => {
+  const dot = PLANE_COLORS[status] ?? '#424242';
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">' +
+    '<path d="M16 2 L18.2 12 L30 19 L30 21.5 L18.2 18.5 L17.6 26 L21 28.5 L21 30 L16 28.8 L11 30 L11 28.5 L14.4 26 L13.8 18.5 L2 21.5 L2 19 L13.8 12 Z" fill="#111" stroke="#fff" stroke-width="1"/>' +
+    `<circle cx="16" cy="15" r="2.6" fill="${dot}"/>` +
+    '</svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 };
 
 /**
@@ -36,6 +58,7 @@ export default class UAVFeature extends Feature<Point> {
   _scale: number;
   _status: Status | null;
   _hideLabel: boolean;
+  _vehicleType: SwarmVehicleType | undefined;
   _iconImage: Icon | null;
   _selectionImage: Icon | null;
 
@@ -62,6 +85,7 @@ export default class UAVFeature extends Feature<Point> {
     this._scale = 1;
     this._status = null;
     this._hideLabel = Boolean(hideLabel ?? false);
+    this._vehicleType = undefined;
     this._iconImage = null;
     this._selectionImage = null;
 
@@ -182,6 +206,26 @@ export default class UAVFeature extends Feature<Point> {
   }
 
   /**
+   * Returns the vehicle type that decides which icon is drawn.
+   */
+  get vehicleType() {
+    return this._vehicleType;
+  }
+
+  /**
+   * Sets the vehicle type: fixed-wing vehicles get a plane icon, everything
+   * else the copter icon.
+   */
+  set vehicleType(value) {
+    if (this._vehicleType === value) {
+      return;
+    }
+
+    this._vehicleType = value;
+    this._setupStyle();
+  }
+
+  /**
    * Returns the current status level of the UAV.
    */
   get status() {
@@ -212,7 +256,10 @@ export default class UAVFeature extends Feature<Point> {
       rotateWithView: true,
       rotation: this._headingToRotation(),
       scale: this._scale,
-      src: droneImages[this._status ?? ''] ?? DroneImage,
+      src:
+        this._vehicleType === 'fixedwing'
+          ? planeImage(this._status ?? '')
+          : (droneImages[this._status ?? ''] ?? DroneImage),
     });
     this._iconImage = iconImage;
 

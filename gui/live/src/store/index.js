@@ -128,8 +128,6 @@ const persistConfig = {
     // Store only saved coordinates from RTK
     createFilter('rtk', ['savedCoordinates']),
 
-    // We do not wish to save 3D view tooltips, camera pose or the scene ID
-    createBlacklistFilter('threeD', ['camera', 'tooltip', 'sceneId']),
   ],
 };
 

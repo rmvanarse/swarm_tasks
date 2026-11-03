@@ -32,13 +32,22 @@ class NetworkIP:
         Priority:
         1. Ethernet
         2. Wi-Fi
+
+        Excludes virtual adapters (Get-NetAdapter's own `Virtual` flag) --
+        without this, a Hyper-V vEthernet adapter (WSL's included) also
+        reports MediaType 802.3 ("Ethernet") and can out-rank the real
+        physical/Wi-Fi adapter purely on enumeration order, returning an
+        address nothing outside this machine's WSL virtual switch can
+        reach. Confirmed on a real machine: `vEthernet (WSL ...)` at
+        172.24.x.1 was being returned ahead of the real Wi-Fi adapter's
+        192.168.x.x address.
         """
 
         command = """
         $result = @()
 
         $adapters = Get-NetAdapter | Where-Object {
-            $_.Status -eq 'Up'
+            $_.Status -eq 'Up' -and $_.Virtual -eq $false
         }
 
         foreach ($adapter in $adapters) {

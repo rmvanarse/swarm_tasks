@@ -49,7 +49,6 @@ import { Protocol } from '~/features/servers/types';
 import {
   clearStartTimeAndMethod,
   setShowControlSchedule,
-  synchronizeShowSettings,
 } from '~/features/show/slice';
 import { showError, showNotification } from '~/features/snackbar/actions';
 import { MessageSemantics } from '~/features/snackbar/types';
@@ -589,15 +588,6 @@ async function executeTasksAfterConnection(dispatch, getState) {
 
     // Set the license received in the response from the server.
     dispatch(setServerLicense(await messageHub.query.getLicenseInformation()));
-
-    // Check if the server supports drone show execution, and if so,
-    // synchronize the show settings
-    const supportsDroneShows = await messageHub.query.isExtensionLoaded('show');
-    if (supportsDroneShows) {
-      // Synchronize the start time, the start method and the mapping of the
-      // show _from_ the server _to_ the local client.
-      dispatch(synchronizeShowSettings('fromServer'));
-    }
 
     // Update device tree subscriptions
     // TODO(ntamas): this is not nice, we are reaching into the internals of

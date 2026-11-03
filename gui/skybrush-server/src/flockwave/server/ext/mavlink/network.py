@@ -809,6 +809,7 @@ class MAVLinkNetwork:
             "SYS_STATUS": self._handle_message_sys_status,
             "TIMESYNC": self._handle_message_timesync,
             "V2_EXTENSION": self._handle_message_v2_extension,
+            "VFR_HUD": self._handle_message_vfr_hud,
         }
 
         autopilot_component_id = MAVComponent.AUTOPILOT1
@@ -922,6 +923,13 @@ class MAVLinkNetwork:
             uav = self._find_uav_from_message(message, address)
             if uav:
                 uav.handle_message_drone_show_status(message)
+
+    def _handle_message_vfr_hud(
+        self, message: MAVLinkMessage, *, connection_id: str, address: Any
+    ):
+        uav = self._find_uav_from_message(message, address)
+        if uav:
+            uav.handle_message_vfr_hud(message)
 
     def _handle_message_global_position_int(
         self, message: MAVLinkMessage, *, connection_id: str, address: Any

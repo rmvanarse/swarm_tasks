@@ -48,6 +48,7 @@ import {
 } from '~/features/selection/slice';
 import NearestItemTooltip from '~/features/session/NearestItemTooltip';
 import { setFeatureIdForTooltip } from '~/features/session/slice';
+import SwarmOpsButton from '~/features/swarm-ops/SwarmOpsButton';
 import { getFollowMapSelectionInUAVDetailsPanel } from '~/features/uavs/selectors';
 import mapViewManager from '~/mapViewManager';
 import {
@@ -409,6 +410,8 @@ class MapViewPresentation extends React.Component {
                   {/* NOTE: Margin is calibrated such that the vertical      */}
                   {/*       drawing toolbar will not cover any of the drones */}
                   <FitAllFeaturesButton duration={500} margin={80} />
+                  <ToolbarDivider orientation='vertical' />
+                  <SwarmOpsButton />
                 </>
               }
             />

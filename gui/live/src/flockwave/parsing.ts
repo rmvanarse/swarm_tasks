@@ -42,18 +42,15 @@ const MULTI_OBJECT_ASYNC_OPERATIONS: Record<string, boolean> = {
   'PRM-SET-MANY': true,
   'UAV-CALIB': true,
   'UAV-FLY': true,
-  'UAV-HALT': true,
   'UAV-HOVER': true,
   'UAV-LAND': true,
   'UAV-MOTOR': true,
   'UAV-RST': true,
   'UAV-RTH': true,
   'UAV-SIGNAL': true,
-  'UAV-SLEEP': true,
   'UAV-TAKEOFF': true,
   'UAV-TEST': true,
   'UAV-VER': true,
-  'UAV-WAKEUP': true,
 };
 
 const SINGLE_OBJECT_ASYNC_OPERATIONS: Record<string, boolean> = {

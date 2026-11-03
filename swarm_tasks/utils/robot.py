@@ -55,7 +55,9 @@ class Bot:
         verbose=False,
     ):
 
-        # TODO: Bot ID
+        # MAVLink system id of the drone this bot stands for. Set by Swarm
+        # after the bot is built (None for a bot with no real drone behind it).
+        self.sysid = None
 
         # Basic attributes
         self.x = x
@@ -426,7 +428,9 @@ class Bot:
     def set_goal(self, x, y):
         self.goal = (x, y)
         self.goal_given = True
-        self.loitering = False  # New waypoint: fly direct, not loiter, until captured again
+        self.loitering = (
+            False  # New waypoint: fly direct, not loiter, until captured again
+        )
         self.loiter_center = None
         self.path = None  # Force regeneration of any cached path
         self.path_goal = None
@@ -485,7 +489,7 @@ class Bot:
         if self.goal_queue:
             nxt = self.goal_queue.pop(0)
             self.set_goal(*nxt)
-            print(f"robot goal set to {nxt}")
+            print(f"robot goal set to {nxt} bot id: {self.sysid}")
             return False
         self.done = True
         return True

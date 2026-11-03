@@ -4,7 +4,14 @@ import { connect } from 'react-redux';
 import { ComplexAvatar, type ComplexAvatarProps } from '~/components/avatar';
 import { getReverseMissionMapping } from '~/features/mission/selectors';
 import { getBatteryFormatter } from '~/features/settings/selectors';
-import { createSingleUAVStatusSummarySelector } from '~/features/uavs/selectors';
+import {
+  createSingleUAVStatusSummarySelector,
+  getUAVById,
+} from '~/features/uavs/selectors';
+import {
+  debugStringToAirspeed,
+  parseSwarmMode,
+} from '~/model/swarm-vehicle-type';
 import type { RootState } from '~/store/reducers';
 import { formatMissionId } from '~/utils/formatting';
 
@@ -16,7 +23,14 @@ type DroneAvatarStateProps = {
 } & Partial<
   Pick<
     ComplexAvatarProps,
-    'batteryStatus' | 'details' | 'gone' | 'status' | 'text' | 'textSemantics'
+    | 'airspeed'
+    | 'batteryStatus'
+    | 'details'
+    | 'gone'
+    | 'mode'
+    | 'status'
+    | 'text'
+    | 'textSemantics'
   >
 >;
 
@@ -39,15 +53,27 @@ const DroneAvatar = connect(
       getReverseMissionMapping,
       (state: RootState, { id }: DroneAvatarOwnProps) =>
         statusSummarySelector(state, id ?? ''),
+      (state: RootState, { id }: DroneAvatarOwnProps) =>
+        id === undefined
+          ? undefined
+          : debugStringToAirspeed(getUAVById(state, id)?.debugString),
+      (state: RootState, { id }: DroneAvatarOwnProps) =>
+        id === undefined
+          ? undefined
+          : parseSwarmMode(getUAVById(state, id)?.mode).activity,
       (_state: RootState, ownProps: DroneAvatarOwnProps) => ownProps,
       (
         batteryFormatter,
         reverseMissionMapping,
         statusSummary,
+        airspeed,
+        mode,
         { hint, id, label, variant = 'full' }
       ): DroneAvatarStateProps => {
         const props: DroneAvatarStateProps = {
           batteryFormatter,
+          airspeed,
+          mode,
           ...statusSummary,
         };
 

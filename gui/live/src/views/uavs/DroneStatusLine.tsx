@@ -19,7 +19,14 @@ import {
   getUAVById,
 } from '~/features/uavs/selectors';
 import { NULL_ISLAND, type GPSFix, type GPSPosition } from '~/model/geography';
-import { parseSwarmMode, vehicleTypeLabel } from '~/model/swarm-vehicle-type';
+import {
+  debugStringToAirspeed,
+  debugStringToVehicleType,
+  isVehicleTypeDebugString,
+  parseSwarmMode,
+  vehicleTypeLabel,
+  type SwarmVehicleType,
+} from '~/model/swarm-vehicle-type';
 import { UAVAge } from '~/model/uav';
 import {
   getPreferredCoordinateFormatter,
@@ -59,6 +66,8 @@ type DroneStatusLineCalculatedProps = Partial<{
   rssi: number[];
   text: string;
   textSemantics: Status;
+  announcedVehicleType: SwarmVehicleType;
+  airspeed: number;
 }>;
 
 type DroneStatusLineProps = DroneStatusLineOwnProps &
@@ -155,10 +164,14 @@ const DroneStatusLine = ({
   secondaryLabel = '',
   text,
   textSemantics = Status.INFO,
+  announcedVehicleType,
+  airspeed,
 }: DroneStatusLineProps) => {
   const classes = useStyles();
   const { amsl, ahl, agl } = position;
-  const { vehicleType, activity } = parseSwarmMode(mode);
+  const parsedMode = parseSwarmMode(mode);
+  const vehicleType = parsedMode.vehicleType ?? announcedVehicleType;
+  const activity = parsedMode.activity;
   return (
     <div className={clsx(classes.root, gone && classes.gone)}>
       {padStart(label, 5)}
@@ -200,6 +213,13 @@ const DroneStatusLine = ({
             formatter={batteryFormatter}
             {...batteryStatus}
           />
+          {!isNil(airspeed) ? (
+            <span title='Airspeed'>{padStart(airspeed.toFixed(1), 5)}m/s </span>
+          ) : (
+            <span className={classes.muted} title='Airspeed'>
+              {'  ———m/s '}
+            </span>
+          )}
           <ColoredLight inline color={color} />
           <RSSIIndicator className={classes.rssiPills} rssi={rssi} />
           <GPSStatusPill
@@ -235,7 +255,11 @@ const DroneStatusLine = ({
           <StatusText status={headingDeviationToStatus(headingDeviation)}>
             {padStart(!isNil(heading) ? Math.round(heading) + '°' : '', 5)}
           </StatusText>
-          <span>{debugString ? ' ' + debugString : ''}</span>
+          <span>
+            {debugString && !isVehicleTypeDebugString(debugString)
+              ? ' ' + debugString
+              : ''}
+          </span>
         </>
       )}
     </div>
@@ -289,6 +313,8 @@ export default connect(
         mode,
         position,
         rssi,
+        announcedVehicleType: debugStringToVehicleType(debugString),
+        airspeed: debugStringToAirspeed(debugString),
         ...statusSummarySelector(state, uavId),
       };
     };

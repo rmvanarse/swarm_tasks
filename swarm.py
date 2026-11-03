@@ -4,7 +4,7 @@ sys.path.insert(
     0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../.."))
 )
 from swarm_tasks.simulation import simulation as sim
-from swarm_tasks.mission.bezier_curve import BezierCurveMultiple
+from swarm_tasks.mission.bezier_curve import BezierCurveMultiple, check_coverage_area
 from swarm_tasks.controllers.guided import line_waypoint_guidance
 from swarm_tasks.utils import waypoints as wp
 from swarm_tasks.Thread import Thread
@@ -51,6 +51,12 @@ class _NullGui:
         pass
 
     def show_goals(self, *args, **kwargs):
+        pass
+
+    def show_route(self, *args, **kwargs):
+        pass
+
+    def clear_routes(self, *args, **kwargs):
         pass
 
     def show_gps_positions(self, *args, **kwargs):
@@ -186,6 +192,11 @@ class Swarm:
         self.s.speed = self._resolve_bot_speeds()
         self.s.bank_angle_deg = self._resolve_bot_bank_angles()
         self.s._populate(positions=positions, num_bots=num_bots)
+        # Tag every freshly built bot with its drone's MAVLink system id.
+        # Bots are rebuilt on each mission command, so this has to be
+        # redone here rather than once at construction.
+        for bot, sysid in zip(self.s.swarm, self.vehicle.system_ids):
+            bot.sysid = sysid
 
     def stopAction(self):
         """call_back_action handed to Thread.stop(): the list of things
@@ -224,6 +235,8 @@ class Swarm:
         # run's fresh axes.
         with self._gui_lock:
             self._gui_state.clear()
+        if self.gui is not None:
+            self.gui.clear_routes()
         self.goal_jobs = []
         # NOT removed_bots: taking a bot out of the swarm is a
         # membership fact that has to outlive a stop, or the next
@@ -896,6 +909,11 @@ class Swarm:
                 f"{sorted(self.removed_bots)} removed"
             )
         effective_num_uavs = len(active)
+        # Reject an impossible area now, before the sim is rebuilt and the
+        # plot reset -- those would be left half-done by a late failure.
+        check_coverage_area(
+            effective_num_uavs, float(grid_space), float(coverage_area)
+        )
 
         pos = self.vehicle.get_positions(
             geoToCart=geoToCart,
@@ -930,23 +948,13 @@ class Swarm:
         curve.generate_bezier_curve()
         goal_sequences = wp.load_goals_for_swarm(curve.filePaths)
 
-        colors = ["red", "blue", "green", "orange", "purple"]
-        for i, seq in enumerate(goal_sequences):
-            xs, ys = zip(*seq)
-            self.gui.ax.plot(
-                xs,
-                ys,
-                "x--",
-                color=colors[i % len(colors)],
-                markersize=8,
-                mew=2,
-                alpha=0.6,
-            )
-
         # zip against `active`, so sequence 0 goes to the first bot
         # still in the swarm rather than to bot 1 by position.
         for index, seq in zip(active, goal_sequences):
             self._assign(index, seq)
+            # Newest route only: replaces this bot's previous route line.
+            xs, ys = zip(*seq)
+            self.gui.show_route([index], xs, ys)
 
         self.gui.run()
 
@@ -1080,19 +1088,9 @@ class Swarm:
             self.gui.show_env()
             self.gui.show_bots()
 
-        colors = ["red", "blue", "green", "orange", "purple"]
-        # for i, seq in enumerate(goal_latlon):
-
+        # Newest route only: replaces the old route lines of these bots.
         xs, ys = zip(*goal_latlon)
-        self.gui.ax.plot(
-            xs,
-            ys,
-            "x--",
-            color=colors[random.randint(0, 5) % len(colors)],
-            markersize=8,
-            mew=2,
-            alpha=0.6,
-        )
+        self.gui.show_route([i - 1 for i in ids], xs, ys)
 
         self.gui.run()
 
@@ -1260,23 +1258,13 @@ class Swarm:
         )
         print(split.filePath)
         goal_sequences = wp.load_goals_for_swarm(split.filePath)
-        colors = ["red", "blue", "green", "orange", "purple"]
-        for i, seq in enumerate(goal_sequences):
-            xs, ys = zip(*seq)
-            self.gui.ax.plot(
-                xs,
-                ys,
-                "x--",
-                color=colors[i % len(colors)],
-                markersize=8,
-                mew=2,
-                alpha=0.6,
-            )
-
         # zip against `active`, so sequence 0 goes to the first bot
         # still in the swarm rather than to bot 1 by position.
         for index, seq in zip(active, goal_sequences):
             self._assign(index, seq)
+            # Newest route only: replaces this bot's previous route line.
+            xs, ys = zip(*seq)
+            self.gui.show_route([index], xs, ys)
 
         self.gui.run()
 
@@ -1402,23 +1390,13 @@ class Swarm:
         )
 
         goal_sequences = wp.load_goals_for_swarm(split.filePaths)
-        colors = ["red", "blue", "green", "orange", "purple"]
-        for i, seq in enumerate(goal_sequences):
-            xs, ys = zip(*seq)
-            self.gui.ax.plot(
-                xs,
-                ys,
-                "x--",
-                color=colors[i % len(colors)],
-                markersize=8,
-                mew=2,
-                alpha=0.6,
-            )
-
         # zip against `active`, so sequence 0 goes to the first bot
         # still in the swarm rather than to bot 1 by position.
         for index, seq in zip(active, goal_sequences):
             self._assign(index, seq)
+            # Newest route only: replaces this bot's previous route line.
+            xs, ys = zip(*seq)
+            self.gui.show_route([index], xs, ys)
 
         self.gui.run()
 

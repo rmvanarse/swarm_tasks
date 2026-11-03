@@ -11,6 +11,26 @@ from utils import mission_dir
 # in matplotlib/Qt at all.
 
 
+GAP_BETWEEN_RECTANGLES_M = 50
+
+
+def check_coverage_area(num_of_drones, grid_space, coverage_area):
+    """Raise ValueError unless every drone's strip is at least one grid
+    line tall. GridFormation() cuts the coverage area into one strip per
+    drone with a gap between strips; when the area is smaller than the
+    gaps alone the strips get negative height and no waypoints, which
+    used to surface much later as an IndexError in generate_bezier_curve().
+    """
+    needed = (num_of_drones - 1) * GAP_BETWEEN_RECTANGLES_M + num_of_drones * grid_space
+    if coverage_area < needed:
+        raise ValueError(
+            f"coverage area {coverage_area:g} m is too small for "
+            f"{num_of_drones} drone(s) with {grid_space:g} m grid spacing: "
+            f"need at least {needed:g} m "
+            f"({GAP_BETWEEN_RECTANGLES_M} m gap between strips + one grid line each)"
+        )
+
+
 class BezierCurveMultiple:
     def __init__(
         self,
@@ -77,8 +97,9 @@ class BezierCurveMultiple:
         num_rectangles = self.num_of_drones
         grid_spacing = self.grid_space
         meters_for_extended_lines = 250
-        gap_between_rectangles = 50
+        gap_between_rectangles = GAP_BETWEEN_RECTANGLES_M
 
+        check_coverage_area(num_rectangles, grid_spacing, self.coverage_area)
         full_width, full_height = self.coverage_area, self.coverage_area
 
         total_gap_height = (num_rectangles - 1) * gap_between_rectangles

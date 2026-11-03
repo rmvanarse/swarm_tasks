@@ -101,31 +101,6 @@ export const getDisplayLanguage = (state: RootState): string =>
   state.settings.display.language;
 
 /**
- * Returns the name of the lighting conditions preset for the 3D view.
- */
-export const getLightingConditionsForThreeDView = (
-  state: RootState
-): 'light' | 'dark' => {
-  const { lighting } = state.settings.threeD;
-  const scenery = String(state.settings.threeD.scenery);
-
-  // Map legacy names to the new ones
-  if (scenery === 'day') {
-    return 'light';
-  }
-
-  if (scenery === 'night') {
-    return 'dark';
-  }
-
-  if (lighting === 'light') {
-    return 'light';
-  }
-
-  return 'dark';
-};
-
-/**
  * Returns the maximum number of concurrent upload tasks that the client should
  * attempt to start on the server during upload jobs.
  */
@@ -152,30 +127,6 @@ export const getMinimumOutdoorTakeoffSpacing = (state: RootState): number =>
 export const getPreferredBatteryDisplayStyle = (
   state: RootState
 ): BatteryDisplayStyle => state.settings.uavs.preferredBatteryDisplayStyle;
-
-/**
- * Returns the name of the scenery preset for the 3D view.
- */
-export const getSceneryForThreeDView = (
-  state: RootState
-): 'outdoor' | 'indoor' | 'auto' => {
-  const result = String(state.settings.threeD.scenery);
-
-  // Map legacy names to the new ones
-  if (result === 'day' || result === 'night') {
-    return 'outdoor';
-  }
-
-  if (result === 'indoor') {
-    return 'indoor';
-  }
-
-  if (result === 'auto') {
-    return 'auto';
-  }
-
-  return 'outdoor';
-};
 
 /**
  * Returns the "aging thresholds" for the UAVs that decide when a UAV should

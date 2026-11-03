@@ -110,6 +110,9 @@ from .utils import (
 
 __all__ = ("MAVLinkDriver",)
 
+DEFAULT_TAKEOFF_ALTITUDE_M = 2.5
+"""Takeoff altitude used when the GCS does not specify one."""
+
 
 SEC_TO_USEC = 1000000
 """Conversion constant from seconds to microseconds."""
@@ -849,7 +852,7 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         # hardcoding the ArduCopter mode numbers here. If we wanted to do this
         # properly, we would not be able to broadcast because different UAVs
         # may have different autopilots and the mode numbers might be different.
-        base_mode, mode, submode = MAVModeFlag.CUSTOM_MODE_ENABLED, 16, 0
+        base_mode, mode, submode = MAVModeFlag.CUSTOM_MODE_ENABLED, 5, 0  # Loiter
 
         await self.broadcast_command_long_with_retries(
             MAVCommand.DO_SET_MODE,
@@ -863,7 +866,12 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         self, uav: "MAVLinkUAV", *, transport=None
     ) -> None:
         channel = transport_options_to_channel(transport)
-        await uav.set_mode("pos hold", channel=channel)
+        # A quadplane hovers in QLoiter; plain Loiter would make it circle as
+        # a fixed-wing. Copters have no such mode and fall back to Loiter.
+        try:
+            await uav.set_mode("qloiter", channel=channel)
+        except ValueError:
+            await uav.set_mode("loiter", channel=channel)
 
     async def _send_landing_signal_broadcast(self, *, transport=None) -> None:
         channel = transport_options_to_channel(transport)
@@ -996,13 +1004,26 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
             raise RuntimeError("Failed to send shutdown command to autopilot")
 
     async def _send_takeoff_signal_single(
-        self, uav: "MAVLinkUAV", *, scheduled: bool = False, transport=None
+        self,
+        uav: "MAVLinkUAV",
+        *,
+        scheduled: bool = False,
+        altitude: float | None = None,
+        transport=None,
     ) -> None:
         if scheduled:
             # Ignore this; scheduled takeoffs are managed by the ScheduledTakeoffManager
             return
 
         channel = transport_options_to_channel(transport)
+
+        # NAV_TAKEOFF is only accepted in a guided mode on ArduPilot, so switch
+        # to it first; the operator then picks Loiter (or a swarm command) once
+        # the vehicle is up.
+        try:
+            await uav.set_mode("guided", channel=channel)
+        except ValueError:
+            pass
 
         await self._send_motor_start_stop_signal_single(
             uav, start=True, transport=transport
@@ -1013,7 +1034,10 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         await sleep(0.1)
 
         # Send the takeoff command
-        await uav.takeoff_to_relative_altitude(2.5, channel=channel)
+        await uav.takeoff_to_relative_altitude(
+            altitude if altitude is not None else DEFAULT_TAKEOFF_ALTITUDE_M,
+            channel=channel,
+        )
 
     async def _set_parameter_single(
         self, uav: "MAVLinkUAV", name: str, value: Any
@@ -1210,6 +1234,8 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
         self._autopilot = make_autopilot()
 
         self._battery = BatteryInfo()
+        self._vehicle_kind = "copter"
+        self._airspeed: float | None = None
         self._connected_event = Event()
         self._gps_fix = GPSFix()
         self._last_messages = defaultdict(MAVLinkMessageRecord)
@@ -1902,6 +1928,21 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
 
         self.notify_updated()
 
+    def _publish_vehicle_info(self) -> None:
+        """Tells Live the vehicle kind and airspeed ("plane;as=23.4") through
+        the status "debug" field, the only free-form field in the UAV status;
+        the ArduPilot status path never fills it otherwise."""
+        info = self._vehicle_kind
+        if self._airspeed is not None:
+            info += f";as={self._airspeed:.1f}"
+        self.update_status(debug=info.encode("ascii"))
+
+    def handle_message_vfr_hud(self, message: MAVLinkMessage):
+        """Handles an incoming MAVLink VFR_HUD message (airspeed in m/s)."""
+        self._airspeed = float(message.airspeed)
+        self._publish_vehicle_info()
+        self.notify_updated()
+
     def handle_message_heartbeat(self, message: MAVLinkMessage):
         """Handles an incoming MAVLink HEARTBEAT message targeted at this UAV."""
         if self._mavlink_version < 2 and message.get_msgbuf()[0] == 253:
@@ -1934,6 +1975,13 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
 
         if self._connection_state is not ConnectionState.CONNECTED:
             self.notify_reconnection(message)
+
+        # MAV_TYPE 1 = fixed wing, 19-22 = VTOL variants (quadplane etc.)
+        mav_type = int(message.type)
+        self._vehicle_kind = (
+            "plane" if mav_type == 1 or 19 <= mav_type <= 22 else "copter"
+        )
+        self._publish_vehicle_info()
 
         # Do we already have basic information about the autopilot capabilities?
         # If we don't, ask for them.
@@ -2799,6 +2847,7 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
             (MAVMessageType.SYS_STATUS, 1),
             (MAVMessageType.GPS_RAW_INT, 1),
             (MAVMessageType.GLOBAL_POSITION_INT, 2),
+            (MAVMessageType.VFR_HUD, 2),
         ]
 
         for message_id, interval_hz in stream_rates:
@@ -2842,6 +2891,16 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
         await self.driver.send_packet(
             spec.request_data_stream(
                 req_stream_id=MAVDataStream.POSITION,
+                req_message_rate=2,
+                start_stop=1,
+            ),
+            target=self,
+        )
+
+        # EXTRA2: VFR_HUD carries the airspeed shown in Live's UAV list
+        await self.driver.send_packet(
+            spec.request_data_stream(
+                req_stream_id=MAVDataStream.EXTRA2,
                 req_message_rate=2,
                 start_stop=1,
             ),

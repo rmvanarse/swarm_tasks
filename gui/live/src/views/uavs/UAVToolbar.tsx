@@ -41,7 +41,6 @@ const UAVToolbar = ({
       <UAVOperationsButtonGroup
         broadcast={isBroadcast}
         selectedUAVIds={selectedUAVIds}
-        showColorOverrideBadges
       />
 
       <Box sx={{ flex: 1 }} />

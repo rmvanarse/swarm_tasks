@@ -53,18 +53,6 @@ const initialState: SettingsSliceState = {
     },
   },
 
-  threeD: {
-    scenery: 'auto',
-    lighting: 'dark',
-    grid: 'none',
-    quality: 'medium',
-    showAxes: true,
-    showHomePositions: true,
-    showLandingPositions: false,
-    showStatistics: false,
-    showTrajectoriesOfSelection: true,
-  },
-
   localServer: {
     cliArguments: '',
     enabled: false,
@@ -120,13 +108,6 @@ const { actions, reducer } = createSlice({
       },
     },
 
-    toggleLightingConditionsInThreeDView: noPayload<SettingsSliceState>(
-      (state) => {
-        state.threeD.lighting =
-          state.threeD.lighting === 'dark' ? 'light' : 'dark';
-      }
-    ),
-
     updateAppSettings: {
       prepare: <Category extends keyof SettingsSliceState>(
         category: Category,
@@ -154,7 +135,6 @@ const { actions, reducer } = createSlice({
 
 export const {
   replaceAppSettings,
-  toggleLightingConditionsInThreeDView,
   updateAppSettings,
 } = actions;
 

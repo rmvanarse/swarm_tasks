@@ -95,12 +95,9 @@ EXTENSIONS = {
     "studio": {},  # used to trigger auto-loading when the license is installed
     "swarm_bridge": {
         "enabled": False,
-        "num_bots": 10,
-        "id_format": "{0}",
         "command_host": "127.0.0.1",
         "command_port": 12008,
-        "telemetry_url": "http://127.0.0.1:8765/api/telemetry",
-        "poll_interval": 0.5,
+        "id_map": {},
         "default_guided_circle_direction": 1,
         "default_guided_circle_radius": 50,
     },

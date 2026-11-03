@@ -47,6 +47,7 @@ const useStyles = makeStyles((theme) => ({
   },
 
   batteryStatus: {
+    flexShrink: 0,
     marginTop: theme.spacing(0.25),
   },
 
@@ -56,6 +57,14 @@ const useStyles = makeStyles((theme) => ({
 
   hint: {
     fontSize: '0.75rem',
+  },
+
+  // Pills sit in a flex column of fixed height; without this they get shrunk
+  // (and their text clipped) when the avatar has more than one pill under it.
+  pill: {
+    flexShrink: 0,
+    lineHeight: 1.3,
+    marginTop: theme.spacing(0.5),
   },
 
   hintSeparator: {
@@ -81,6 +90,7 @@ const useStyles = makeStyles((theme) => ({
 
 export type ComplexAvatarProps = {
   AvatarProps?: Omit<SemanticAvatarProps, 'children' | 'status'>;
+  airspeed?: number;
   batteryFormatter?: BatteryFormatter;
   batteryStatus?: Omit<BatteryIndicatorProps, 'className' | 'formatter'>;
   crossed?: boolean;
@@ -90,6 +100,7 @@ export type ComplexAvatarProps = {
   hint?: string;
   id?: string;
   label?: ReactNode;
+  mode?: string;
   progress?: number;
   selected?: boolean;
   status?: Status;
@@ -103,6 +114,7 @@ export type ComplexAvatarProps = {
  */
 const ComplexAvatar = ({
   AvatarProps,
+  airspeed,
   batteryFormatter,
   batteryStatus,
   crossed,
@@ -112,6 +124,7 @@ const ComplexAvatar = ({
   hint,
   id,
   label,
+  mode,
   progress,
   status = Status.OFF,
   text,
@@ -136,8 +149,6 @@ const ComplexAvatar = ({
         >
           <div className={classes.avatarContent}>
             {label === undefined ? id : label}
-            <hr className={classes.hintSeparator} />
-            <div className={classes.hint}>{effectiveHint || '—'}</div>
           </div>
         </SemanticAvatar>
         {progress !== undefined && progress > 0 && (
@@ -150,7 +161,25 @@ const ComplexAvatar = ({
         )}
       </div>
       {(details || text) && (
-        <StatusPill status={textSemantics}>{details || text}</StatusPill>
+        <StatusPill status={textSemantics} className={classes.pill}>
+          {details || text}
+        </StatusPill>
+      )}
+      {batteryStatus && (
+        <StatusPill
+          status={Status.OFF}
+          className={clsx(classes.hint, classes.pill)}
+        >
+          {mode || '----'}
+        </StatusPill>
+      )}
+      {batteryStatus && (
+        <StatusPill
+          status={textSemantics}
+          className={clsx(classes.hint, classes.pill)}
+        >
+          {airspeed === undefined ? '—' : airspeed.toFixed(1)} m/s
+        </StatusPill>
       )}
       {batteryStatus && (
         <BatteryIndicator

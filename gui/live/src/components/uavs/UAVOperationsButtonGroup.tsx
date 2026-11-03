@@ -5,31 +5,23 @@ import Explore from '@mui/icons-material/Explore';
 import PositionHold from '@mui/icons-material/Flag';
 import FlightLand from '@mui/icons-material/FlightLand';
 import FlightTakeoff from '@mui/icons-material/FlightTakeoff';
-import Hub from '@mui/icons-material/Hub';
 import Home from '@mui/icons-material/Home';
-import Moon from '@mui/icons-material/NightsStay';
+import NearMe from '@mui/icons-material/NearMe';
 import PersonAddAlt from '@mui/icons-material/PersonAddAlt';
 import PersonRemove from '@mui/icons-material/PersonRemove';
 import PlayArrow from '@mui/icons-material/PlayArrow';
-import PowerSettingsNew from '@mui/icons-material/PowerSettingsNew';
-import Refresh from '@mui/icons-material/Refresh';
 import Stop from '@mui/icons-material/Stop';
-import WbSunny from '@mui/icons-material/WbSunny';
-import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import { bindActionCreators } from '@reduxjs/toolkit';
 import type { TransportOptions } from '@skybrush/flockwave-spec';
 import isEmpty from 'lodash-es/isEmpty';
-import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
-import { useInterval } from 'react-use';
 
 import Colors from '~/components/colors';
 import ToolbarDivider from '~/components/ToolbarDivider';
 import { TooltipWithContainerFromContext as Tooltip } from '~/containerContext';
 import { getPreferredCommunicationChannelIndex } from '~/features/mission/selectors';
-import { UAV_SIGNAL_DURATION } from '~/features/settings/constants';
 import {
   type AggregatedTaskState,
   createAggregatedTaskStateSelector,
@@ -37,7 +29,6 @@ import {
   TASK_SPECS,
 } from '~/features/tasks';
 import { sendAddCommand, sendRemoveCommand, sendStopCommand } from '~/features/swarm-ops/actions';
-import { openSwarmOpsDialog } from '~/features/swarm-ops/slice';
 import {
   requestRemovalOfUAVsByIds,
   requestRemovalOfUAVsMarkedAsGone,
@@ -45,17 +36,13 @@ import {
 import { UAV_TOOLBAR_MULTI_SELECTION_LIMIT } from '~/features/uavs/constants';
 import { openUAVDetailsDialog } from '~/features/uavs/details';
 import { getSelectedUAVIds, getUAVIdList } from '~/features/uavs/selectors';
-import Bolt from '~/icons/Bolt';
 import type { AppDispatch, RootState } from '~/store/reducers';
 import { createUAVOperationThunks } from '~/utils/messaging';
-
-import OverrideUAVColorButton from './OverrideUAVColorButton';
 
 type OwnProps = {
   broadcast: boolean;
   hideSeparators?: boolean;
   selectedUAVIds: string[];
-  showColorOverrideBadges?: boolean;
   size?: 'small' | 'medium';
   startSeparator?: boolean;
 };
@@ -64,15 +51,10 @@ type Props = OwnProps & {
   compassCalibrationStatus: AggregatedTaskState;
   dispatch: AppDispatch;
   getTargetedUAVIds: (state: RootState) => string[];
-  openSwarmOpsDialog: () => void;
   openUAVDetailsDialog: (id: string) => void;
   requestRemovalOfUAVsByIds: (ids: string[]) => void;
   requestRemovalOfUAVsMarkedAsGone: () => void;
 };
-
-// Must be valid CSS color names that are _also_ understood by the server in the
-// "color" command
-const COLORS: string[] = ['#ff0000', '#00ff00', '#0000ff', '#ffffff'];
 
 /**
  * Main toolbar for controlling the UAVs.
@@ -83,13 +65,11 @@ const UAVOperationsButtonGroup = ({
   dispatch,
   getTargetedUAVIds,
   hideSeparators,
-  openSwarmOpsDialog,
   openUAVDetailsDialog,
   requestRemovalOfUAVsByIds,
   requestRemovalOfUAVsMarkedAsGone,
   selectedUAVIds,
   size,
-  showColorOverrideBadges,
   startSeparator,
 }: Props) => {
   const { t } = useTranslation();
@@ -97,17 +77,13 @@ const UAVOperationsButtonGroup = ({
   const isSelectionSingle = selectedUAVIds.length === 1 && !broadcast;
 
   const {
-    flashLight,
+    guidedMode,
     holdPosition,
     land,
-    reset,
     returnToHome,
-    shutdown,
-    sleep,
     takeOff,
     turnMotorsOff,
     turnMotorsOn,
-    wakeUp,
   } = bindActionCreators(
     createUAVOperationThunks({
       getTargetedUAVIds,
@@ -131,53 +107,11 @@ const UAVOperationsButtonGroup = ({
     dispatch
   );
 
-  const [keepFlashing, setKeepFlashing] = useState(false);
-  const flashLightsButtonOnClick = useCallback(
-    (event: React.MouseEvent<HTMLElement>) => {
-      if (keepFlashing) {
-        setKeepFlashing(false);
-      } else if (event.shiftKey) {
-        setKeepFlashing(true);
-        flashLight();
-      } else {
-        flashLight();
-      }
-    },
-    [flashLight, keepFlashing, setKeepFlashing]
-  );
-
-  useInterval(flashLight, keepFlashing ? UAV_SIGNAL_DURATION * 1000 : null);
-
   const fontSize = size === 'small' ? 'small' : 'medium';
   const iconSize = size;
   const allowOperationForMultipleSelection =
     selectedUAVIds.length >= 1 &&
     selectedUAVIds.length <= UAV_TOOLBAR_MULTI_SELECTION_LIMIT;
-
-  const flashLightsButton =
-    size === 'small' ? (
-      <Button
-        startIcon={<WbSunny color={keepFlashing ? 'primary' : undefined} />}
-        disabled={isSelectionEmpty}
-        size={iconSize}
-        onClick={flashLightsButtonOnClick}
-      >
-        {t('UAVOpButtonGrp.flashLights')}
-      </Button>
-    ) : (
-      <Tooltip content={t('UAVOpButtonGrp.flashLights')}>
-        <IconButton
-          disabled={isSelectionEmpty}
-          size={iconSize}
-          onClick={flashLightsButtonOnClick}
-        >
-          <WbSunny
-            fontSize={fontSize}
-            color={keepFlashing ? 'primary' : undefined}
-          />
-        </IconButton>
-      </Tooltip>
-    );
 
   return (
     <>
@@ -202,6 +136,16 @@ const UAVOperationsButtonGroup = ({
           onClick={holdPosition}
         >
           <PositionHold fontSize={fontSize} />
+        </IconButton>
+      </Tooltip>
+
+      <Tooltip content={t('general.commands.guidedMode')}>
+        <IconButton
+          disabled={isSelectionEmpty}
+          size={iconSize}
+          onClick={guidedMode}
+        >
+          <NearMe fontSize={fontSize} />
         </IconButton>
       </Tooltip>
 
@@ -234,7 +178,6 @@ const UAVOperationsButtonGroup = ({
               <Assignment />
             </IconButton>
           </Tooltip>
-          {flashLightsButton}
           <Tooltip content={t('general.commands.calibrateCompass')}>
             <IconButton
               size={iconSize}
@@ -262,18 +205,6 @@ const UAVOperationsButtonGroup = ({
 
       {!hideSeparators && <ToolbarDivider orientation='vertical' />}
 
-      {COLORS.map((color) => (
-        <OverrideUAVColorButton
-          key={color}
-          color={color}
-          showBadge={showColorOverrideBadges}
-          uavIds={selectedUAVIds}
-          size={iconSize}
-        />
-      ))}
-
-      {!hideSeparators && <ToolbarDivider orientation='vertical' />}
-
       <Tooltip content={t('UAVOpButtonGrp.armMotors')}>
         <IconButton
           disabled={isSelectionEmpty}
@@ -296,54 +227,6 @@ const UAVOperationsButtonGroup = ({
           <Clear
             fontSize={fontSize}
             htmlColor={isSelectionEmpty ? undefined : Colors.warning}
-          />
-        </IconButton>
-      </Tooltip>
-
-      {size === 'small' && flashLightsButton}
-
-      {!hideSeparators && <ToolbarDivider orientation='vertical' />}
-
-      <Tooltip content={t('general.commands.powerOn')}>
-        <IconButton
-          disabled={isSelectionEmpty}
-          size={iconSize}
-          onClick={wakeUp}
-        >
-          <Bolt
-            htmlColor={isSelectionEmpty ? undefined : Colors.success}
-            fontSize={fontSize}
-          />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip content={t('general.commands.sleep')}>
-        <IconButton disabled={isSelectionEmpty} size={iconSize} onClick={sleep}>
-          <Moon
-            htmlColor={isSelectionEmpty ? undefined : Colors.warning}
-            fontSize={fontSize}
-          />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip content={t('general.commands.reboot')}>
-        <IconButton disabled={isSelectionEmpty} size={iconSize} onClick={reset}>
-          <Refresh
-            htmlColor={isSelectionEmpty ? undefined : Colors.error}
-            fontSize={fontSize}
-          />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip content={t('general.commands.powerOff')}>
-        <IconButton
-          disabled={isSelectionEmpty}
-          size={iconSize}
-          onClick={shutdown}
-        >
-          <PowerSettingsNew
-            htmlColor={isSelectionEmpty ? undefined : Colors.error}
-            fontSize={fontSize}
           />
         </IconButton>
       </Tooltip>
@@ -376,7 +259,7 @@ const UAVOperationsButtonGroup = ({
       {!hideSeparators && <ToolbarDivider orientation='vertical' />}
 
       <Tooltip content='Stop (global -- stops whatever the swarm is currently running)'>
-        <IconButton size={iconSize} onClick={() => sendStopCommand()}>
+        <IconButton size={iconSize} onClick={() => void sendStopCommand()}>
           <Stop fontSize={fontSize} htmlColor={Colors.error} />
         </IconButton>
       </Tooltip>
@@ -385,7 +268,7 @@ const UAVOperationsButtonGroup = ({
         <IconButton
           disabled={isSelectionEmpty}
           size={iconSize}
-          onClick={() => sendRemoveCommand(selectedUAVIds)}
+          onClick={() => void sendRemoveCommand(selectedUAVIds)}
         >
           <PersonRemove fontSize={fontSize} />
         </IconButton>
@@ -395,19 +278,11 @@ const UAVOperationsButtonGroup = ({
         <IconButton
           disabled={isSelectionEmpty}
           size={iconSize}
-          onClick={() => sendAddCommand(selectedUAVIds)}
+          onClick={() => void sendAddCommand(selectedUAVIds)}
         >
           <PersonAddAlt fontSize={fontSize} />
         </IconButton>
       </Tooltip>
-
-      {size !== 'small' && (
-        <Tooltip content='Swarm ops (search / split / specific split / heights / multi-waypoint goal)'>
-          <IconButton size={iconSize} onClick={openSwarmOpsDialog}>
-            <Hub fontSize={fontSize} />
-          </IconButton>
-        </Tooltip>
-      )}
     </>
   );
 };
@@ -436,7 +311,6 @@ export default connect(
   (dispatch) => ({
     ...bindActionCreators(
       {
-        openSwarmOpsDialog,
         openUAVDetailsDialog,
         requestRemovalOfUAVsMarkedAsGone,
         requestRemovalOfUAVsByIds,

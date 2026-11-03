@@ -18,7 +18,6 @@ import APIKeysTab from './APIKeysTab';
 import DisplayTab from './DisplayTab';
 import PreflightTab from './PreflightTab';
 import ServerTab from './ServerTab';
-import ThreeDViewTab from './ThreeDViewTab';
 import UAVsTab from './UAVsTab';
 
 /* ===================================================================== */
@@ -28,7 +27,6 @@ const tabNameToComponent: Record<AppSettingsDialogTab, ReactElement> = {
   display: <DisplayTab />,
   preflight: <PreflightTab />,
   server: <ServerTab />,
-  threeD: <ThreeDViewTab />,
   uavs: <UAVsTab />,
 };
 
@@ -59,7 +57,6 @@ const AppSettingsDialogPresentation = ({
         onChange={onTabSelected}
       >
         <Tab value='display' label={t('settings.tabs.display')} />
-        <Tab value='threeD' label={t('settings.tabs.threeDView')} />
         <Tab value='uavs' label={t('settings.tabs.uavs')} />
         <Tab value='preflight' label={t('settings.tabs.preflight')} />
         {window.bridge && window.bridge.isElectron ? (

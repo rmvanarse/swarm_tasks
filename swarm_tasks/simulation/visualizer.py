@@ -53,6 +53,8 @@ class Gui:
 		self.drone_trail_x = []
 		self.drone_trail_y = []
 		self.goal_artists = []
+		# Planned route lines: list of (set of bot indices, line artist)
+		self.route_artists = []
 		self.gps_artists = []
 		self.lookahead_artists = []
 		self.bot_artists = []  # bot circles + heading arrows drawn by show_bots()
@@ -135,6 +137,33 @@ class Gui:
 			color = self.state_colors[i % len(self.state_colors)]
 			marker, = self.ax.plot(gx, gy, marker='x', markersize=5, markeredgewidth=2, color=color)
 			self.goal_artists.append(marker)
+
+	def clear_routes(self, bot_indices=None):
+		"""Removes the planned route lines of these bots (every bot if None).
+		A route shared by several bots goes away when any of them is cleared."""
+		if not self.isGui: return
+		wanted = None if bot_indices is None else set(bot_indices)
+		kept = []
+		for owners, line in self.route_artists:
+			if wanted is None or owners & wanted:
+				try:
+					line.remove()
+				except (ValueError, NotImplementedError):
+					pass
+			else:
+				kept.append((owners, line))
+		self.route_artists = kept
+
+	def show_route(self, bot_indices, xs, ys):
+		"""Draws the planned waypoint route for these bots, replacing whatever
+		route they had before, so only the newest route per bot stays on the
+		plot. Routes of other bots are left alone."""
+		if not self.isGui: return
+		bot_indices = list(bot_indices)
+		self.clear_routes(bot_indices)
+		color = self.state_colors[bot_indices[0] % len(self.state_colors)]
+		line, = self.ax.plot(xs, ys, 'x--', color=color, markersize=8, mew=2, alpha=0.6)
+		self.route_artists.append((set(bot_indices), line))
 
 	def show_gps_positions(self, points, headings=None):
 		"""Plot each bot's real (live GPS-derived) position, distinct from

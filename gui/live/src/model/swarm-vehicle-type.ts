@@ -12,7 +12,22 @@
  * site in the UI goes through this one function.
  */
 
-export type SwarmVehicleType = 'ground' | 'fixedwing';
+export type SwarmVehicleType = 'ground' | 'copter' | 'fixedwing';
+
+/**
+ * The server's mavlink driver announces the vehicle kind and airspeed in the
+ * status "debug" field as "<plane|copter>[;as=<m/s>]".
+ */
+export const isVehicleTypeDebugString = (value: string | undefined): boolean =>
+  /^(plane|copter)(;|$)/.test(value ?? '');
+
+/** Airspeed in m/s from the announced debug string, if present. */
+export const debugStringToAirspeed = (
+  value: string | undefined
+): number | undefined => {
+  const match = /;as=(-?\d+(?:\.\d+)?)/.exec(value ?? '');
+  return match ? Number(match[1]) : undefined;
+};
 
 export type ParsedSwarmMode = {
   vehicleType: SwarmVehicleType | undefined;
@@ -20,6 +35,16 @@ export type ParsedSwarmMode = {
 };
 
 const KNOWN_VEHICLE_TYPES: SwarmVehicleType[] = ['ground', 'fixedwing'];
+
+/** Maps the server-announced debug string to a vehicle type. */
+export const debugStringToVehicleType = (
+  value: string | undefined
+): SwarmVehicleType | undefined =>
+  /^plane(;|$)/.test(value ?? '')
+    ? 'fixedwing'
+    : /^copter(;|$)/.test(value ?? '')
+      ? 'copter'
+      : undefined;
 
 /**
  * Splits a swarm_bridge-encoded mode string into its vehicle type and
@@ -49,6 +74,7 @@ export const vehicleTypeLabel = (
 ): string => {
   switch (vehicleType) {
     case 'ground':
+    case 'copter':
       return 'COPTR';
     case 'fixedwing':
       return 'PLANE';

@@ -129,12 +129,6 @@ const toggleOptionKeyMap: KeyMap = {
 };
 
 const sendCommandKeyMap: KeyMap = {
-  SEND_FLASH_LIGHTS_COMMAND: {
-    name: 'Flash lights on selected UAVs',
-    sequence: 'w',
-    scopes: [HotkeyScope.GLOBAL],
-  },
-
   SEND_TAKEOFF_COMMAND: {
     name: 'Send takeoff command to selection',
     sequence: 'mod+alt+t',
@@ -148,7 +142,7 @@ const sendCommandKeyMap: KeyMap = {
   },
 
   SEND_POSITION_HOLD_COMMAND: {
-    name: 'Send position hold command to selection',
+    name: 'Send loiter command to selection',
     sequence: 'mod+alt+p',
     scopes: [HotkeyScope.GLOBAL],
   },

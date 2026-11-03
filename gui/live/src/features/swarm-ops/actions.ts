@@ -1,37 +1,74 @@
 /**
- * @file Thunks that send this project's custom swarm commands to the
- * backend over the generic Flockwave OBJ-CMD message, dispatched by
- * SwarmBridgeDriver's handle_multi_command_<name>/handle_command_<name>
- * methods (gui/skybrush-server/src/flockwave/server/ext/swarm_bridge/driver.py)
- * into main.py's exact wire format (main.py:43-137).
+ * @file Thunks that send this project's swarm commands to the server as one
+ * `X-SWARM-CMD` message each. The server's swarm_bridge extension
+ * (gui/skybrush-server/src/flockwave/server/ext/swarm_bridge/) turns the
+ * command into the text format main.py expects and forwards it over UDP.
+ *
+ * These are fleet-level operations, so they are not routed through any UAV
+ * driver: drone telemetry and stock vehicle controls come from the server's
+ * mavlink extension, swarm operations from this message.
  */
 
-import { performMassOperation } from '~/utils/messaging';
+import { getUAVIdList } from '~/features/uavs/selectors';
+import messageHub from '~/message-hub';
+import store from '~/store';
+import { runMassOperation, type Outcomes } from '~/utils/messaging';
 
 /**
- * Builds a thunk-like sender for one of main.py's named commands. `kwds`
- * is spread as keyword arguments into the matching
- * handle_multi_command_<command>()/handle_command_<command>() method on
- * the server, so its keys must match that method's parameter names
- * exactly.
+ * Fleet-wide commands (stop, search, specific split, heights) ignore the
+ * selection; the ids are only used for the confirmation text and the
+ * success/failure notification.
+ */
+const allKnownUAVIds = (): string[] => getUAVIdList(store.getState());
+
+/**
+ * Builds a sender for one named swarm command. `kwds` keys must match the
+ * `_build_<command>()` parameters in swarm_bridge/driver.py exactly.
  */
 function createSwarmCommandSender(
   command: string,
   name: string,
   { skipConfirmation = false }: { skipConfirmation?: boolean } = {}
 ) {
-  const send = performMassOperation<
-    Record<string, unknown>,
-    { command: string; kwds: Record<string, unknown> }
-  >({
-    type: 'OBJ-CMD',
-    name,
-    skipConfirmation,
-    mapper: (kwds) => ({ command, kwds }),
-  });
+  return async (
+    uavIds: string[],
+    kwds: Record<string, unknown> = {}
+  ): Promise<void> => {
+    await runMassOperation(store.dispatch, () => store.getState(), {
+      name,
+      uavIds,
+      isBroadcast: false,
+      skipConfirmation,
+      run: async () => {
+        const outcome = await sendSwarmMessage(command, uavIds, kwds);
+        const outcomes: Outcomes = {};
+        for (const id of uavIds) {
+          outcomes[id] = outcome;
+        }
+        return outcomes;
+      },
+    });
+  };
+}
 
-  return (uavIds: string[], kwds: Record<string, unknown> = {}) =>
-    send(uavIds, kwds);
+async function sendSwarmMessage(
+  command: string,
+  uavIds: string[],
+  kwds: Record<string, unknown>
+): Promise<'success' | 'failure'> {
+  try {
+    // A negative acknowledgement from the server rejects this promise.
+    await messageHub.sendMessage({
+      type: 'X-SWARM-CMD',
+      command,
+      uavIds,
+      kwds,
+    });
+    return 'success';
+  } catch (error) {
+    console.error(`Swarm command ${command} failed`, error);
+    return 'failure';
+  }
 }
 
 /** goal_<json goal_latlon>_<direction>_<radius>_<json ids> */
@@ -41,14 +78,14 @@ export const sendGoalCommand = createSwarmCommandSender('goal', 'Goal');
 const sendStop = createSwarmCommandSender('stop', 'Stop', {
   skipConfirmation: true,
 });
-export const sendStopCommand = () => sendStop([], {});
+export const sendStopCommand = () => sendStop(allKnownUAVIds(), {});
 
 /** search,<center_lat>,<center_lon>,<num_uavs>,<grid_space>,<coverage_area> */
 const sendSearch = createSwarmCommandSender('search', 'Search', {
   skipConfirmation: true,
 });
 export const sendSearchCommand = (kwds: Record<string, unknown>) =>
-  sendSearch([], kwds);
+  sendSearch(allKnownUAVIds(), kwds);
 
 /** split_<json center_lat_lon_array>_<json selected_uav_ids>_<json grid_space>_<json coverage_area> */
 export const sendSplitCommand = createSwarmCommandSender('split', 'Split');
@@ -60,7 +97,7 @@ const sendSpecificSplit = createSwarmCommandSender(
   { skipConfirmation: true }
 );
 export const sendSpecificSplitCommand = (kwds: Record<string, unknown>) =>
-  sendSpecificSplit([], kwds);
+  sendSpecificSplit(allKnownUAVIds(), kwds);
 
 /** different,<start>,<diff> -- sets every bot's commanded height. */
 const sendDifferent = createSwarmCommandSender(
@@ -69,15 +106,15 @@ const sendDifferent = createSwarmCommandSender(
   { skipConfirmation: true }
 );
 export const sendDifferentHeightsCommand = (kwds: Record<string, unknown>) =>
-  sendDifferent([], kwds);
+  sendDifferent(allKnownUAVIds(), kwds);
 
-/** remove_<json [id]> -- self-heal: freeze this one bot. */
+/** remove_<json [id]> -- self-heal: freeze the given bots. */
 export const sendRemoveCommand = createSwarmCommandSender(
   'remove',
   'Remove from swarm'
 );
 
-/** add_<json [id]> -- bring this one bot back into service. */
+/** add_<json [id]> -- bring the given bots back into service. */
 export const sendAddCommand = createSwarmCommandSender(
   'add',
   'Add back to swarm'
