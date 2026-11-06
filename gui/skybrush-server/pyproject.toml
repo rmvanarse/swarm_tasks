@@ -1,0 +1,178 @@
+[project]
+name = "flockwave-server"
+version = "2.58.2"
+description = "Swarm GCS backend (fork of Skybrush server with drone-light-show extensions removed)"
+authors = [
+  { name = "Tamas Nepusz", email = "tamas@collmot.com" },
+  { name = "Gabor Vasarhelyi", email = "vasarhelyi@collmot.com" },
+]
+license = "GPL-3.0-or-later"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+  "bidict>=0.23.1,<0.24.0",
+  "click>=8.2.1,<9.0.0",
+  "blinker>=1.9.0,<2.0.0",
+  "python-baseconv>=1.2.2,<2.0.0",
+  "pynmea2>=1.19.0,<2.0.0",
+  "trio>=0.34.0,<0.35.0",
+  "quart>=0.20.0,<0.21.0",
+  "quart-trio>=0.12.0,<0.13.0",
+  "trio-util>=0.8.0,<0.9.0",
+  "python-dotenv>=1.1.0,<2.0.0",
+  "colour>=0.1.5,<0.2.0",
+  "pyjwt>=2.14.0,<3.0.0",
+  "hypercorn[trio]>=0.18.0,<0.19.0",
+  "passlib[bcrypt]>=1.7.4,<2.0.0",
+  "flockwave-app-framework[daemon]>=3.6.0,<4.0.0",
+  "flockwave-async>=3.0.0,<4.0.0",
+  "flockwave-conn[rpc,serial]>=9.3.1,<10.0.0",
+  "flockwave-ext>=2.1.2,<3.0.0",
+  "flockwave-gps>=6.0.0,<7.0.0",
+  "flockwave-logger>=3.0.0,<4.0.0",
+  "flockwave-mavlink>=1.0.1,<2.0.0",
+  "flockwave-net[async]>=8.1.0,<9.0.0",
+  "flockwave-parsers>=4.0.1,<5.0.0",
+  "flockwave-spec[validation]>=2.11.0,<3.0.0",
+  "pyledctrl>=4.1.0,<5.0.0",
+  "aiocflib>=5.0.2,<6.0.0",
+  "crcmod-plus>=2.1.0,<3.0.0",
+  "msgpack>=1.1.1,<2.0.0",
+  "aio-usb-hotplug>=8.0.0,<9.0.0",
+  "pyserial>=3.5.0,<4.0.0",
+  "compose>=1.6.2,<2.0.0",
+  "adrenaline>=4.0.1,<5.0.0",
+  "httpx>=0.28.1,<0.29.0",
+  "igrf-model>=1.1.4,<2.0.0",
+  "deprecated>=1.2.18,<2.0.0",
+  "unidecode>=1.4.0,<2.0.0",
+  "wrapt>=2.0.0,<3.0.0",
+  "cachetools>=7.0.1,<8.0.0",
+  "platformdirs>=4.3.8,<5.0.0",
+  "fastjsonschema>=2.21.1,<3.0.0",
+  "orjson>=3.10.18,<4.0.0",
+  "numpy>=2.2.6",
+  "typing-extensions>=4.15.0",
+  "pydantic>=2.13.4",
+  "skybrush-ext-webui>=1.1.0",
+  "certifi>=2026.10.19",
+]
+
+[project.scripts]
+skybrushd = "flockwave.server.launcher:start"
+skybrush-gateway = "flockwave.gateway.launcher:start"
+skybrush-proxy = "flockwave.proxy.launcher:start"
+
+[project.optional-dependencies]
+all = ["flockwave-server[collmot,pro]"]
+collmot = [
+  "flockwave-server[pro]",
+  "flockwave-flockctrl>=4.0.0",
+  "skybrush-ext-dock>=1.2.0",
+  "skybrush-ext-flockctrl>=4.2.1",
+]
+pro = [
+  "skybrush-ext-firmware-update>=0.5.0",
+  "skybrush-ext-flight-report>=1.0.3",
+  "skybrush-ext-map-cache>=1.1.1",
+  "skybrush-ext-show-pro>=1.0.2",
+  "skybrush-ext-sidekick>=1.2.1",
+  "skybrush-ext-skynet>=0.6.0",
+  "skybrush-ext-studio>=1.9.0",
+  "skybrush-ext-timecode>=1.4.2",
+  "skybrush-lib-mission-planning>=2.4.1",
+  "skybrush-opt-rs",
+  "skybrush-studio",
+  "skynet",
+]
+
+[tool.uv.build-backend]
+module-name = "flockwave"
+namespace = true
+
+[[tool.uv.index]]
+name = "collmot"
+url = "https://pypi.collmot.com/"
+explicit = true
+
+[[tool.uv.index]]
+name = "fury"
+url = "https://pypi.fury.io/skybrush/"
+publish-url = "https://pypi.fury.io/skybrush/"
+
+[tool.uv.sources]
+flockwave-app-framework = { index = "fury" }
+flockwave-async = { index = "fury" }
+flockwave-conn = { index = "fury" }
+flockwave-ext = { index = "fury" }
+flockwave-flockctrl = { index = "collmot" }
+flockwave-gps = { index = "fury" }
+flockwave-logger = { index = "fury" }
+flockwave-mavlink = { index = "fury" }
+flockwave-net = { index = "fury" }
+flockwave-parsers = { index = "fury" }
+flockwave-spec = { index = "fury" }
+pyledctrl = { index = "fury" }
+skybrush-ext-dock = { index = "collmot" }
+skybrush-ext-firmware-update = { index = "collmot" }
+skybrush-ext-flight-report = { index = "collmot" }
+skybrush-ext-flockctrl = { index = "collmot" }
+skybrush-ext-map-cache = { index = "collmot" }
+skybrush-ext-show-pro = { index = "collmot" }
+skybrush-ext-skynet = { index = "collmot" }
+skybrush-ext-sidekick = { index = "collmot" }
+skybrush-ext-studio = { index = "collmot" }
+skybrush-ext-timecode = { index = "collmot" }
+skybrush-ext-webui = { index = "fury" }
+skybrush-lib-mission-planning = { index = "collmot" }
+skybrush-opt-rs = { index = "collmot" }
+skybrush-studio = { index = "collmot" }
+skynet = { index = "collmot" }
+
+[dependency-groups]
+dev = [
+  # do not add flockwave-server[all] here because it would cause problems for
+  # users working with the open-source version
+  "coverage[toml]>=7.9.1",
+  "pdoc>=15.0.4",
+  "poethepoet>=0.42.1",
+  "pytest>=8.4.1",
+  "pytest-cov>=6.2.1",
+  "pytest-datadir>=1.8.0",
+  "pytest-trio>=0.8.0",
+  "ruff>=0.15.5",
+  "ty>=0.0.78",
+]
+
+[tool.poe.tasks]
+
+start = "skybrushd"
+gateway = "skybrush-gateway"
+proxy = "skybrush-proxy"
+
+format = "ruff format . --check"
+format-fix = "ruff format ."
+
+lint = "ruff check ."
+lint-fix = "ruff check . --fix"
+
+ty = "ty check src/ test/"
+
+check.sequence = ["format", "lint"]
+check.ignore_fail = "return_non_zero"
+
+test.cmd = "python -m pytest test"
+
+[tool.pytest.ini_options]
+trio_mode = 1
+
+[tool.ruff]
+lint.ignore = ["B905", "C901", "E402", "E501"]
+lint.select = ["B", "C", "E", "F", "I", "W"]
+extend-exclude = ["src/flockwave/server/ext/socketio/vendor"]
+
+[tool.ty.src]
+exclude = ["src/flockwave/server/ext/socketio/vendor"]
+
+[build-system]
+requires = ["uv_build>=0.11,<0.14"]
+build-backend = "uv_build"

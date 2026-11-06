@@ -1,0 +1,12 @@
+.tags
+.git
+.venv/
+*.egg-info
+*.pyc
+*.pyo
+*.swp
+build/
+dist/
+tmp/
+__pycache__
+Pipfile*

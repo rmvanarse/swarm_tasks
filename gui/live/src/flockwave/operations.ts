@@ -1,0 +1,759 @@
+/**
+ * Functions for handling common operations on the Flockwave server using
+ * promises.
+ */
+
+import type {
+  CollectiveRTHPlanResult,
+  DroneLightsConfiguration,
+  DroneShowConfiguration,
+  Response_ACKNAK,
+  Response_EXTRELOAD,
+  Response_EXTSETCFG,
+  RTKSurveySettings,
+} from '@skybrush/flockwave-spec';
+
+import { errorToString } from '~/error-handling';
+import type { OutdoorCoordinateSystemWithOrigin } from '~/features/show/types';
+import type { MissionItemBundle } from '~/model/missions';
+import { toScaledJSONFromLonLat } from '~/utils/geography';
+import type { Coordinate3D } from '~/utils/math';
+import { isBoolean, isRecord } from '~/utils/types';
+
+import {
+  createBulkParameterUploadRequest,
+  createFirmwareUploadRequest,
+  createParameterSettingRequest,
+} from './builders';
+import type MessageHub from './messages';
+import type {
+  AsyncOperationOptions,
+  AsyncResponseHandlerOptions,
+  MultiObjectAsyncOperationOptions,
+} from './messages';
+import { extractResponseForId } from './parsing';
+import { isSchedule, type Schedule } from './schedule';
+import type {
+  CollectiveRTHConfig,
+  Message,
+  MessageBody,
+  Response_XSHOWADAPT,
+  ShowAdaptTransformation,
+} from './types';
+import {
+  validateCollectiveRTHPlanResult,
+  validateExtensionName,
+  validateObjectId,
+} from './validation';
+
+const getErrorMessageFromBody = (body: unknown, fallback: string): string => {
+  if (isRecord(body)) {
+    if (typeof body.reason === 'string' && body.reason.length > 0) {
+      return body.reason;
+    }
+
+    if (typeof body.error === 'string' && body.error.length > 0) {
+      return body.error;
+    }
+  }
+
+  return fallback;
+};
+
+/**
+ * Adapts the given base64-encoded show using the given transformation
+ * definitions and coordinate system.
+ */
+export async function adaptShow(
+  hub: MessageHub,
+  show: string,
+  transformations: ShowAdaptTransformation[],
+  coordinateSystem: OutdoorCoordinateSystemWithOrigin,
+  options: AsyncOperationOptions = {}
+): Promise<Response_XSHOWADAPT> {
+  const response = await hub.sendMessage<Response_XSHOWADAPT>(
+    {
+      type: 'X-SHOW-ADAPT',
+      show,
+      transformations,
+      environment: {
+        location: {
+          origin: toScaledJSONFromLonLat(coordinateSystem.origin),
+          orientation: coordinateSystem.orientation,
+        },
+      },
+    },
+    {
+      // Use a very long timeout for this message as the transformations
+      // require a lot of computation.
+      timeout: 600,
+      ...options,
+    }
+  );
+
+  if (response?.body?.type === 'X-SHOW-ADAPT') {
+    return response.body;
+  } else {
+    throw new Error(response?.body?.reason ?? 'Unknown error.');
+  }
+}
+
+/**
+ * Adds collective RTH plans to drones using the given configuration.
+ */
+export async function addCollectiveRTH(
+  hub: MessageHub,
+  show: string,
+  config: CollectiveRTHConfig,
+  options: AsyncOperationOptions = {}
+): Promise<CollectiveRTHPlanResult> {
+  try {
+    const plan = await hub.startAsyncOperation<CollectiveRTHPlanResult>(
+      {
+        type: 'X-SHOW-CRTH-PLAN',
+        show,
+        config,
+      },
+      {
+        // Use a very long timeout for this message as the transformations
+        // require a lot of computation.
+        timeout: 600,
+        ...options,
+      }
+    );
+    validateCollectiveRTHPlanResult(plan);
+    return plan;
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(`Failed to calculate collective RTH plan: ${errorString}`, {
+      cause: error,
+    });
+  }
+}
+
+/**
+ * Asks the server to set a new configuration object for the extension with the
+ * given name.
+ *
+ * Returns whether the operation was successful.
+ */
+export async function configureExtension(
+  hub: MessageHub,
+  name: string,
+  configuration: unknown
+): Promise<boolean> {
+  validateExtensionName(name);
+
+  const response: Message<Response_EXTSETCFG> = await hub.sendMessage({
+    type: 'EXT-SETCFG',
+    ids: { [name]: configuration },
+  });
+
+  const status = extractResponseForId(response, name, {
+    error: `Failed to retrieve configuration for extension: ${name}`,
+  });
+
+  return Boolean(status);
+}
+
+/**
+ * Asks the server to reload the extension with the given name.
+ *
+ * Returns whether the operation was successful.
+ */
+export async function reloadExtension(
+  hub: MessageHub,
+  name: string
+): Promise<boolean> {
+  validateExtensionName(name);
+
+  const response: Message<Response_EXTRELOAD> = await hub.sendMessage({
+    type: 'EXT-RELOAD',
+    ids: [name],
+  });
+
+  const status = extractResponseForId(response, name, {
+    error: `Failed to reload extension: ${name}`,
+  });
+
+  return Boolean(status);
+}
+
+/**
+ * Asks the server to reset the UAV with the given ID.
+ */
+export async function resetUAV(hub: MessageHub, uavId: string): Promise<void> {
+  try {
+    await hub.startMultiObjectAsyncOperationForSingleId(uavId, {
+      type: 'UAV-RST',
+    });
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(`Failed to reset UAV ${uavId}: ${errorString}`, {
+      cause: error,
+    });
+  }
+}
+
+/**
+ * Asks the server to resume the currently suspended show.
+ */
+export async function resumeShow(hub: MessageHub): Promise<Schedule> {
+  let response: Message<MessageBody>;
+  try {
+    response = await hub.sendMessage({ type: 'X-SHOW-RESUME' });
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(`Failed to resume show. ${errorString}`, { cause: error });
+  }
+
+  if (response.body.type !== 'X-SHOW-RESUME') {
+    throw new Error('Failed to resume show.');
+  }
+
+  if (isSchedule(response.body)) {
+    return response.body;
+  }
+
+  throw new Error(
+    `Invalid schedule in response to X-SHOW-RESUME: ${JSON.stringify(response.body)}`
+  );
+}
+
+/**
+ * Sends some debugging information to the server.
+ */
+export async function sendDebugMessage(
+  hub: MessageHub,
+  message: string
+): Promise<void> {
+  await hub.sendMessage({
+    type: 'X-DBG-RESP',
+    data: message,
+  });
+}
+
+/**
+ * Sets the value of a parameter on a single UAV.
+ */
+export async function setParameter(
+  hub: MessageHub,
+  { uavId, name, value }: { uavId: string; name: string; value: unknown }
+) {
+  const command = createParameterSettingRequest(uavId, name, value);
+  try {
+    await hub.startMultiObjectAsyncOperationForSingleId(uavId, command);
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(
+      `Failed to set parameter ${name} on UAV ${uavId}: ${errorString}`,
+      { cause: error }
+    );
+  }
+}
+
+/**
+ * Sets the value of multiple parameters on a single UAV.
+ *
+ * Supported only by server version 2.34.1 or later.
+ */
+export async function setParameters(
+  hub: MessageHub,
+  { uavId, parameters }: { uavId: string; parameters: Record<string, unknown> },
+  options: MultiObjectAsyncOperationOptions
+) {
+  const command = createBulkParameterUploadRequest(uavId, parameters);
+  let response;
+
+  try {
+    response = await hub.startMultiObjectAsyncOperationForSingleId(
+      uavId,
+      command,
+      options
+    );
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(
+      `Failed to set parameters on UAV ${uavId}: ${errorString}`,
+      {
+        cause: error,
+      }
+    );
+  }
+
+  const { failed = [], success = false } = response as any;
+  if (!success) {
+    if (Array.isArray(failed) && failed.length > 0) {
+      throw new Error(
+        `Failed to set parameters on UAV ${uavId}: ${failed.slice(0, 5).join(', ')}`
+      );
+    } else {
+      throw new Error(`Failed to set parameters on UAV ${uavId}`);
+    }
+  }
+}
+
+/**
+ * Sets the source of the RTK corrections that the server broadcasts to the
+ * connected drones.
+ */
+export async function setRTKCorrectionsSource(
+  hub: MessageHub,
+  presetId: string | null
+) {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-SOURCE',
+    id: presetId,
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to set new RTK correction source'
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Creates a new RTK preset on the server.
+ */
+export async function createRTKPreset(
+  hub: MessageHub,
+  preset: Record<string, unknown>
+): Promise<string> {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-NEW',
+    preset,
+  });
+
+  if (response.body.type === 'X-RTK-NEW') {
+    if ('id' in response.body && typeof response.body.id === 'string') {
+      return response.body.id;
+    }
+
+    throw new Error('Failed to create RTK preset: missing preset ID');
+  }
+
+  const errorMessage = getErrorMessageFromBody(
+    response.body,
+    'Failed to create RTK preset'
+  );
+  throw new Error(errorMessage);
+}
+
+/**
+ * Updates an existing RTK preset on the server.
+ */
+export async function updateRTKPreset(
+  hub: MessageHub,
+  presetId: string,
+  preset: Record<string, unknown>
+) {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-UPDATE',
+    ids: [presetId],
+    updates: {
+      [presetId]: preset,
+    },
+  });
+
+  if (response.body.type !== 'X-RTK-UPDATE') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to update RTK preset'
+    );
+    throw new Error(errorMessage);
+  }
+
+  if (
+    !extractResponseForId(response, presetId, {
+      key: 'result',
+      typeGuard: isBoolean,
+    })
+  ) {
+    throw new Error(
+      'Failed to update RTK preset: operation rejected by server'
+    );
+  }
+}
+
+/**
+ * Deletes an existing RTK preset from the server.
+ */
+export async function deleteRTKPreset(hub: MessageHub, presetId: string) {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-DEL',
+    ids: [presetId],
+  });
+
+  if (response.body.type !== 'X-RTK-DEL') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to delete RTK preset'
+    );
+    throw new Error(errorMessage);
+  }
+
+  if (
+    !extractResponseForId(response, presetId, {
+      key: 'result',
+      typeGuard: isBoolean,
+    })
+  ) {
+    throw new Error('Failed to delete RTK preset: server rejected deletion');
+  }
+}
+
+/**
+ * Persists all current user presets to disk on the server.
+ */
+export async function saveRTKPresets(hub: MessageHub) {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-SAVE',
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to save RTK presets'
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Sets the configuration of the current drone show on the server.
+ */
+export async function setShowConfiguration(
+  hub: MessageHub,
+  config: DroneShowConfiguration
+) {
+  const response = await hub.sendMessage({
+    type: 'SHOW-SETCFG',
+    configuration: config,
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    throw new Error('Failed to set new show configuration on the server');
+  }
+}
+
+/**
+ * Takes control of the LED lights of the drones managed by the server, or
+ * gives up control, depending on the submitted configuration object.
+ */
+export async function setShowLightConfiguration(
+  hub: MessageHub,
+  config: DroneLightsConfiguration
+) {
+  const response = await hub.sendMessage({
+    type: 'SHOW-SETLIGHTS',
+    configuration: config,
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    throw new Error('Failed to set new light configuration on the server');
+  }
+}
+
+export async function startCollectiveRTH(hub: MessageHub): Promise<Schedule> {
+  let response: Message<MessageBody>;
+  try {
+    response = await hub.sendMessage({ type: 'X-SHOW-CRTH-START' });
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(`Failed to start collective RTH. ${errorString}`, {
+      cause: error,
+    });
+  }
+
+  if (response.body.type !== 'X-SHOW-CRTH-START') {
+    throw new Error('Failed to start collective RTH.');
+  }
+
+  if (isSchedule(response.body)) {
+    return response.body;
+  }
+
+  throw new Error(
+    `Invalid schedule in response to collective RTH trigger: ${JSON.stringify(response.body)}`
+  );
+}
+
+/**
+ * Asks the RTK framework on the server to start a new survey on the current
+ * RTK connection.
+ */
+export async function startRTKSurvey(
+  hub: MessageHub,
+  settings: RTKSurveySettings
+) {
+  const response = await hub.sendMessage({
+    type: 'RTK-SURVEY',
+    settings,
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to start RTK survey on the server'
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Sets the RTK antenna position on the server by submitting explicit
+ * survey settings that contain a fixed position instead of starting a survey.
+ */
+export async function setRTKAntennaPosition(
+  hub: MessageHub,
+  { position, accuracy }: { position: Coordinate3D; accuracy: number }
+) {
+  const response = await hub.sendMessage({
+    type: 'X-RTK-SURVEY',
+    settings: {
+      position,
+      accuracy,
+    },
+  });
+
+  if (response.body.type !== 'ACK-ACK') {
+    const errorMessage = getErrorMessageFromBody(
+      response.body,
+      'Failed to set RTK antenna position on the server'
+    );
+    throw new Error(errorMessage);
+  }
+}
+
+/**
+ * Asks the server to suspend the currently running show.
+ */
+export async function suspendShow(hub: MessageHub): Promise<Schedule> {
+  let response: Message<MessageBody>;
+  try {
+    response = await hub.sendMessage({ type: 'X-SHOW-SUSPEND' });
+  } catch (error) {
+    const errorString = errorToString(error);
+    throw new Error(`Failed to suspend show. ${errorString}`, {
+      cause: error,
+    });
+  }
+
+  if (response.body.type !== 'X-SHOW-SUSPEND') {
+    throw new Error('Failed to suspend show.');
+  }
+
+  if (isSchedule(response.body)) {
+    return response.body;
+  }
+
+  throw new Error(
+    `Invalid schedule in response to X-SHOW-SUSPEND: ${JSON.stringify(response.body)}`
+  );
+}
+
+/**
+ * Asks the server to upload a drone show specification to a given UAV.
+ */
+export async function uploadDroneShow(
+  hub: MessageHub,
+  { uavId, data }: { uavId: string; data: string },
+  options: AsyncResponseHandlerOptions
+) {
+  validateObjectId(uavId);
+
+  // HACK: we are (ab)using the command execution mechanism. This is probably
+  // okay as a temporary solution, but we might need a better solution in the
+  // long term.
+  try {
+    await hub.sendCommandRequest(
+      {
+        uavId,
+        command: '__show_upload',
+        kwds: {
+          show: data,
+        },
+      },
+      {
+        timeout: 300 /* five minutes, should be longer than the timeout on the server */,
+        ...options,
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      errorToString(
+        (error as any).message || error,
+        `Failed to upload show data to UAV ${uavId}`
+      ),
+      { cause: error }
+    );
+  }
+}
+
+/**
+ * Ask the server to update the firmware of a given component.
+ */
+export async function uploadFirmware(
+  hub: MessageHub,
+  {
+    objectId,
+    target,
+    blob,
+  }: { objectId: string; target: string; blob: string },
+  options: MultiObjectAsyncOperationOptions = {}
+) {
+  const command = createFirmwareUploadRequest(objectId, target, blob);
+  try {
+    await hub.startMultiObjectAsyncOperationForSingleId(
+      objectId,
+      command,
+      options
+    );
+  } catch (error) {
+    const errorString = errorToString(error);
+    // Currently we assume that we can only post a firmware update to a UAV;
+    // this might change in the future but so far we are okay
+    throw new Error(
+      `Failed to upload firmware update to UAV ${objectId}: ${errorString}`,
+      { cause: error }
+    );
+  }
+}
+
+/**
+ * Asks the server to upload a mission in some mission format to a given UAV.
+ */
+export async function uploadMission(
+  hub: MessageHub,
+  {
+    uavId,
+    data,
+    format,
+  }: { uavId: string; data: MissionItemBundle; format: string },
+  options: AsyncResponseHandlerOptions
+) {
+  validateObjectId(uavId);
+
+  // HACK HACK HACK we are (ab)using the command execution mechanism. This is
+  // probably okay as a temporary solution, but we might need a better solution
+  // in the long term.
+  try {
+    await hub.sendCommandRequest(
+      {
+        uavId,
+        command: '__mission_upload',
+        args: [data, format],
+      },
+      {
+        timeout: 300 /* five minutes, should be longer than the timeout on the server */,
+        ...options,
+      }
+    );
+  } catch (error) {
+    throw new Error(
+      errorToString(
+        (error as any).message || error,
+        `Failed to upload mission to UAV ${uavId}`
+      ),
+      { cause: error }
+    );
+  }
+}
+
+/**
+ * Custom class of errors representing server side plan generation problems.
+ */
+export class ServerPlanError extends Error {
+  constructor(message?: string) {
+    super(message);
+    this.name = 'ServerPlanError';
+  }
+}
+
+/**
+ * Sends a request to the server to plan a mission with the given parameters.
+ */
+export async function planMission(
+  hub: MessageHub,
+  { id, parameters }: { id: string; parameters: Record<string, unknown> }
+) {
+  const response = await hub.sendMessage<
+    | (MessageBody<'X-MSN-PLAN'> & { result: Record<string, unknown> })
+    | Response_ACKNAK
+  >({ type: 'X-MSN-PLAN', id, parameters });
+
+  const { type } = response.body;
+  if (type !== 'X-MSN-PLAN') {
+    throw new ServerPlanError(response.body.reason);
+  }
+
+  const { result } = response.body;
+  if (result?.format !== 'skybrush-live/mission-items') {
+    throw new Error(
+      `Mission plan has an unknown format: ${String(result?.format)}`
+    );
+  }
+
+  const { payload } = result;
+  if (
+    !(typeof payload === 'object' && payload !== null) ||
+    !('version' in payload && payload?.version == 1) ||
+    !('items' in payload && Array.isArray(payload?.items))
+  ) {
+    throw new Error('Mission plan response must be in version 1 format');
+  }
+
+  return payload;
+}
+
+const _operations = {
+  adaptShow,
+  addCollectiveRTH,
+  configureExtension,
+  createRTKPreset,
+  deleteRTKPreset,
+  planMission,
+  reloadExtension,
+  resetUAV,
+  resumeShow,
+  saveRTKPresets,
+  sendDebugMessage,
+  setParameter,
+  setParameters,
+  setRTKAntennaPosition,
+  setRTKCorrectionsSource,
+  setShowConfiguration,
+  setShowLightConfiguration,
+  startCollectiveRTH,
+  startRTKSurvey,
+  suspendShow,
+  updateRTKPreset,
+  uploadDroneShow,
+  uploadFirmware,
+  uploadMission,
+};
+
+type RemoveHubArg<F> = F extends (hub: MessageHub, ...args: infer A) => infer R
+  ? (...args: A) => R
+  : never;
+export type OperationExecutor = {
+  [K in keyof typeof _operations]: RemoveHubArg<(typeof _operations)[K]>;
+};
+
+/**
+ * Query handler object that can be used to perform common operations on a
+ * Flockwave server using a given message hub.
+ */
+export const createOperationExecutor = (hub: MessageHub): OperationExecutor =>
+  Object.fromEntries(
+    Object.entries(_operations).map(([name, func]) => [
+      name,
+      // @ts-expect-error Correctly annotating this would require dependent
+      //                  types, as each operation has different arguments
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      (...args) => func(hub, ...args),
+    ])
+  ) as OperationExecutor;

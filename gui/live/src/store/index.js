@@ -1,0 +1,313 @@
+/**
+ * @file The master store for the application state.
+ */
+
+import { bindActionCreators, configureStore, isPlain } from '@reduxjs/toolkit';
+
+import config from 'config';
+import { produce } from 'immer';
+import isPromise from 'is-promise';
+import localForage from 'localforage';
+import isError from 'lodash-es/isError';
+import isFunction from 'lodash-es/isFunction';
+import createDeferred from 'p-defer';
+import createDebounce from 'redux-debounce';
+import { persistReducer, persistStore } from 'redux-persist';
+import {
+  createBlacklistFilter,
+  createFilter,
+} from 'redux-persist-transform-filter';
+import { createPromise } from 'redux-promise-middleware';
+import createSagaMiddleware from 'redux-saga';
+
+import { setLayerParametersById } from '~/features/map/layers';
+import { updateAveragingByIds } from '~/features/measurement/slice';
+import { shouldPreventSleepMode } from '~/features/power-saving/selectors';
+import { updateRTKStatistics } from '~/features/rtk/slice';
+import { showAppSettingsDialog } from '~/features/settings/actions';
+import { loadingPromiseFulfilled } from '~/features/show/slice';
+import { updateAgesOfUAVs, updateUAVs } from '~/features/uavs/slice';
+import { saveWorkbenchState } from '~/features/workbench/slice';
+import { LayerType } from '~/model/layers';
+
+import migrations from './migrations';
+import { defaultStateReconciler, pristineReconciler } from './reconciler';
+import reducer from './reducers';
+import { bindSelectors } from './subscriptions';
+
+/**
+ * Configuration of `redux-persist` to store the application state.
+ *
+ * In the browser, we store the state in the browser's local storage using
+ * `localForage`.
+ *
+ * In the Electron version, we store the state in a separate JSON file using
+ * `electron-store`.
+ */
+const persistConfig = {
+  key: 'flockwave-client',
+  storage: window.bridge ? window.bridge.createStateStore() : localForage,
+  version: 3,
+  migrate: migrations,
+  stateReconciler: defaultStateReconciler,
+
+  // do not store the following slices of the state in the storage
+  blacklist: [
+    'alert',
+    'beacons',
+    'clocks',
+    'connections',
+    'detachablePanels',
+    'docks',
+    'firmwareUpdate',
+    'localServer',
+    'log',
+    'messages',
+    'servers',
+    'session',
+    'snackbar',
+    'tasks',
+    'uavs',
+    'weather',
+  ],
+
+  // do not save more frequently than once every second
+  throttle: 1000 /* msec */,
+
+  transforms: [
+    // The state of the consistency check setup dialog is transient and
+    // should not reopen on reload
+    createBlacklistFilter('consistencyCheck', ['dialog']),
+
+    // store the state of only the given dialogs
+    createFilter('dialogs', [
+      'appSettings',
+      'collectiveRTH',
+      'featureEditor',
+      'layerSettings',
+      'messages',
+      'savedLocationEditor',
+      'serverSettings',
+    ]),
+
+    // The open flag of the collective RTH dialog is transient
+    createBlacklistFilter('dialogs', ['collectiveRTH.open']),
+
+    // The pending UAV Id overlay should be temporary and reset on reload
+    createBlacklistFilter('hotkeys', ['pendingUAVId']),
+
+    // We do not wish to store the state of the license check, only whether the
+    // license info dialog is open
+    createFilter('licenseInfo', ['dialog']),
+
+    // We do not wish to store home/landing positions and takeoff heading in
+    // the mission because they depend on the loaded show anyway
+    createBlacklistFilter('mission', [
+      // NOTE: Home positions now persist, as mission items are persistent, and
+      //       home positions are used in geofence and estimate calculations.
+      //       This might not be the best long-term solution.
+      // 'homePositions',
+      'landingPositions',
+      'takeoffHeadings',
+      'lastClearedMissionData',
+    ]),
+
+    // We do not wish to save which preflight checks the user has ticked off
+    createBlacklistFilter('preflight', ['checked']),
+
+    // We want to keep only the stored groups from the selection slice
+    createFilter('selection', ['groups']),
+
+    // Most of the stuff in the 'show' slice is temporary as we unload the
+    // show when refreshing the page
+    createFilter('show', ['environment']),
+
+    // Store only the persistent settings of the upload procedure
+    createFilter('upload', ['settings']),
+
+    // Store only saved coordinates from RTK
+    createFilter('rtk', ['savedCoordinates']),
+
+  ],
+};
+
+/* Examine the query string and prevent restoring the persisted state if the
+ * 'pristine' query argument is specified. This can be used either as an
+ * escape hatch when the persisted state is corrupted, or in setups where it
+ * is important that the user starts from a clean configuration.
+ */
+const url = new URL(window.location.href);
+const shouldStartWithPristineState =
+  config.ephemeral || (url.searchParams && url.searchParams.get('pristine'));
+
+if (shouldStartWithPristineState) {
+  persistConfig.stateReconciler = pristineReconciler;
+}
+
+/**
+ * Redux middleware that debounces actions with the right metadata.
+ */
+const debouncer = createDebounce({
+  simple: 300 /* Msec */,
+});
+
+/**
+ * Redux middleware that handles promises dispatched to the store.
+ */
+const promiseMiddleware = createPromise({
+  promiseTypeDelimiter: 'Promise',
+  promiseTypeSuffixes: ['Pending', 'Fulfilled', 'Rejected'],
+});
+
+/**
+ * Redux middleware that manages long-running background processes.
+ */
+export const sagaMiddleware = createSagaMiddleware();
+
+/**
+ * The store for the application state.
+ */
+const store = configureStore({
+  reducer: persistReducer(persistConfig, reducer),
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware({
+      // Immutability checks slow things down too much
+      immutableCheck: false,
+
+      serializableCheck: {
+        /* redux-persist uses functions in actions and redux-promise-middleware
+         * uses errors. This setting silences a warning about them */
+        isSerializable: (value) =>
+          isPlain(value) ||
+          isFunction(value) ||
+          isPromise(value) ||
+          isError(value),
+
+        // Checking the action dispatched when a show was loaded successfully
+        // takes a long time and it should not be necessary anyway
+        ignoredActions: [
+          String(loadingPromiseFulfilled),
+          String(saveWorkbenchState),
+        ],
+
+        // Checking the show specification takes a long time and it should not
+        // be necessary anyway; same for the workbench state
+        ignoredPaths: ['show.data', 'workbench'],
+      },
+    }).concat(debouncer, promiseMiddleware, sagaMiddleware),
+  devTools:
+    // eslint-disable-next-line node/prefer-global/process
+    process.env.NODE_ENV === 'production'
+      ? false
+      : {
+          actionsDenylist: [
+            updateAgesOfUAVs.type,
+            updateAveragingByIds.type,
+            updateRTKStatistics.type,
+            updateUAVs.type,
+          ],
+
+          // Make sure the show objects and image layer
+          // data are not tracked by the Redux devtools
+          actionSanitizer: produce((action) => {
+            switch (action.type) {
+              case loadingPromiseFulfilled.type:
+                if (action.payload?.spec) {
+                  action.payload.spec = '<<JSON_DATA>>';
+                }
+                if (action.payload?.base64Blob) {
+                  action.payload.base64Blob = '<<BLOB>>';
+                }
+                break;
+
+              case setLayerParametersById.type:
+                if (action.payload.parameters.image?.data) {
+                  action.payload.parameters.image.data = '<<BASE64_DATA_URL>>';
+                }
+                break;
+
+              // no default
+            }
+          }),
+          stateSanitizer: produce((state) => {
+            if (state.show?.data) {
+              state.show.data = '<<JSON_DATA>>';
+            }
+            if (state.show?.base64Blob) {
+              state.show.base64Blob = '<<BLOB>>';
+            }
+
+            for (const layer of Object.values(state.map.layers.byId).filter(
+              (layer) => layer.type === LayerType.IMAGE
+            )) {
+              if (layer.parameters.image?.data) {
+                layer.parameters.image.data = '<<BASE64_DATA_URL>>';
+              }
+            }
+          }),
+        },
+});
+
+/**
+ * Deferred that is resolved when the state has been restored.
+ */
+const stateLoaded = createDeferred();
+
+/**
+ * Redux-persist persistor object that can be used to programmatically load
+ * or save the state of the store.
+ */
+export const persistor = persistStore(store, null, stateLoaded.resolve);
+
+/**
+ * Function that clears the contents of the store completely. It is strongly
+ * advised to reload the app after this function was executed.
+ */
+export async function clearStore() {
+  return persistor.purge();
+}
+
+/**
+ * Function that asks the user to confirm whether he wants to clear all stored
+ * settings and state information, then reloads the page.
+ */
+export async function clearStoreAfterConfirmation() {
+  // eslint-disable-next-line no-alert
+  if (window.confirm('Are you sure? All settings will be lost.')) {
+    await clearStore();
+    window.location.reload();
+  }
+}
+
+/**
+ * Async function that blocks execution until the state of the application has
+ * been restored from local storage.
+ */
+export const waitUntilStateRestored = () => stateLoaded.promise;
+
+// Send some of the allowed actions back to the preloader, bound to the
+// store instance. The preloader may then call these actions but cannot dispatch
+// arbitrary actions to the store.
+if (window.bridge) {
+  window.bridge.provideActions(
+    bindActionCreators(
+      {
+        showAppSettingsDialog,
+      },
+      store.dispatch
+    )
+  );
+
+  // Also provide a method for the preloader to subscribe to the changes of
+  // certain selectors
+  window.bridge.provideSubscriptions(
+    bindSelectors(
+      {
+        shouldPreventSleepMode,
+      },
+      store
+    )
+  );
+}
+
+export default store;

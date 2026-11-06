@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "jsx": "react-jsx",
+    "outDir": "./dist/",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "~/*": ["./src/*"]
+    },
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "esnext",
+    "typeRoots": ["./types", "./node_modules/@types"]
+  }
+}

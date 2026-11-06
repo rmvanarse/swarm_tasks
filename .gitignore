@@ -2,3 +2,20 @@ dist/
 swarm_tasks.egg-info/
 build/
 *__pycache__*
+
+.claude-flow
+.vscode
+
+# Ruflo local secrets and runtime data
+.env
+.env.local
+.env.*.local
+.claude-flow/data/
+.claude-flow/logs/
+.claude-flow/sessions/
+
+# Local-only: WSL virtualenv, packaged copy of the map_cache extension,
+# per-user Claude Code settings
+.venv-wsl/
+gui/skybrush-server/src/flockwave/server/ext/map_cache.zip
+.claude/settings.local.json

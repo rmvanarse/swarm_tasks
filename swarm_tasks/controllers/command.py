@@ -1,5 +1,4 @@
 import numpy as np
-import swarm_tasks.simulation
 from swarm_tasks.utils import robot
 
 """
@@ -58,7 +57,18 @@ class Cmd:
 		
 
 	def exec(self, bot):
-		#Execute the command on a robot
+		"""
+		Execute the command on a robot -- unless the bot has been frozen
+		via bot.stop_if_reached() (bot.done == True), in which case this
+		is a no-op: no motion is applied, so the bot simply holds its
+		last position/heading. This is the single point every task,
+		example, and test script's control loop already calls each
+		frame, so freezing a bot here stops it for the rest of the
+		swarm's run without any of those loops needing to special-case
+		"done" bots individually.
+		"""
+		if getattr(bot, 'done', False):
+			return
 		bot.move(self.dir, self.speed)
 
 	def __add__(self, cmd):

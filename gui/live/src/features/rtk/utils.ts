@@ -1,0 +1,305 @@
+import { Status, colorForStatus } from '@skybrush/app-theme-mui';
+import type { ECEFCoordinate } from '@skybrush/flockwave-spec';
+import type { MiniListItemIconProps } from '@skybrush/mui-components';
+import isEqual from 'lodash-es/isEqual';
+
+import type { TranslateFn } from '~/i18n/types';
+import { formatDistance } from '~/utils/formatting';
+
+import {
+  RTKCorrectionStatus,
+  type RTKSavedCoordinate,
+  type RTKStatistics,
+} from './types';
+
+const descriptions: Record<string, string> = {
+  'rtcm2/1': 'Differential GPS Corrections',
+  'rtcm2/2': 'Delta Differential GPS Corrections',
+  'rtcm2/3': 'GNSS Reference Station Parameters',
+  'rtcm2/4': 'Reference Station Datum',
+  'rtcm2/5': 'GPS Constellation Health',
+  'rtcm2/6': 'GPS Null Frame',
+  'rtcm2/7': 'DGPS Radiobeacon Almanac',
+  'rtcm2/8': 'Pseudolite Almanac',
+  'rtcm2/9': 'GPS Partial Correction Set',
+  'rtcm2/14': 'GPS Time of Week',
+  'rtcm2/15': 'Ionospheric Delay Message',
+  'rtcm2/16': 'GPS Special Message',
+  'rtcm2/18': 'RTK Uncorrected Carrier Phases',
+  'rtcm2/19': 'RTK Uncorrected Pseudoranges',
+  'rtcm2/22': 'Extended Reference Station Parameters',
+  'rtcm2/23': 'Antenna Type Definition Record',
+  'rtcm2/24': 'Antenna Reference Point (ARP)',
+  'rtcm2/36': 'GLONASS Special Message',
+  'rtcm3/1001': 'L1-only GPS RTK',
+  'rtcm3/1002': 'Extended L1-only GPS RTK',
+  'rtcm3/1003': 'L1 & L2 GPS RTK',
+  'rtcm3/1004': 'Extended L1 & L2 GPS RTK',
+  'rtcm3/1005': 'RTK antenna position',
+  'rtcm3/1006': 'RTK antenna pos with height',
+  'rtcm3/1007': 'Antenna descriptor',
+  'rtcm3/1008': 'Antenna descriptor & serial',
+  'rtcm3/1009': 'L1-only GLONASS RTK',
+  'rtcm3/1010': 'Extended L1-only GLONASS RTK',
+  'rtcm3/1011': 'L1 & L2 GLONASS RTK',
+  'rtcm3/1012': 'Extended L1 & L2 GLONASS RTK',
+  'rtcm3/1013': 'System parameters',
+  'rtcm3/1014': 'Network aux station data',
+  'rtcm3/1015': 'GPS ionospheric correction',
+  'rtcm3/1016': 'GPS geometric correction',
+  'rtcm3/1017': 'GPS ionospheric & geometric correction',
+  'rtcm3/1019': 'GPS ephemerides',
+  'rtcm3/1020': 'GLONASS ephemerides',
+  'rtcm3/1029': 'Unicode text string',
+  'rtcm3/1030': 'GPS network RTK residual',
+  'rtcm3/1031': 'GLONASS network RTK residual',
+  'rtcm3/1032': 'Physical reference station position',
+  'rtcm3/1033': 'Receiver and antenna descriptors',
+  'rtcm3/1034': 'GPS FKP gradient',
+  'rtcm3/1035': 'GLONASS FKP gradient',
+  'rtcm3/1037': 'GLONASS ionospheric correction',
+  'rtcm3/1038': 'GLONASS geometric correction',
+  'rtcm3/1039': 'GLONASS ionospheric & geometric correction',
+  'rtcm3/1042': 'BDS (BeiDou) ephemerides',
+  'rtcm3/1044': 'QZSS ephemerides',
+  'rtcm3/1045': 'GALILEO F/NAV ephemerides',
+  'rtcm3/1046': 'GALILEO I/NAV ephemerides',
+  'rtcm3/1071': 'GPS MSM1 (DGNSS pseudorange)',
+  'rtcm3/1072': 'GPS MSM2 (RTK pseudorange)',
+  'rtcm3/1073': 'GPS MSM3 (code, carrier)',
+  'rtcm3/1074': 'GPS MSM4 (code, carrier, CNR)',
+  'rtcm3/1075': 'GPS MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1076': 'GPS MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1077': 'GPS MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1081': 'GLONASS MSM1 (DGNSS pseudorange)',
+  'rtcm3/1082': 'GLONASS MSM2 (RTK pseudorange)',
+  'rtcm3/1083': 'GLONASS MSM3 (code, carrier)',
+  'rtcm3/1084': 'GLONASS MSM4 (code, carrier, CNR)',
+  'rtcm3/1085': 'GLONASS MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1086': 'GLONASS MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1087': 'GLONASS MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1091': 'Galileo MSM1 (DGNSS pseudorange)',
+  'rtcm3/1092': 'Galileo MSM2 (RTK pseudorange)',
+  'rtcm3/1093': 'Galileo MSM3 (code, carrier)',
+  'rtcm3/1094': 'Galileo MSM4 (code, carrier, CNR)',
+  'rtcm3/1095': 'Galileo MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1096': 'Galileo MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1097': 'Galileo MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1101': 'SBAS MSM1 (DGNSS pseudorange)',
+  'rtcm3/1102': 'SBAS MSM2 (RTK pseudorange)',
+  'rtcm3/1103': 'SBAS MSM3 (code, carrier)',
+  'rtcm3/1104': 'SBAS MSM4 (code, carrier, CNR)',
+  'rtcm3/1105': 'SBAS MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1106': 'SBAS MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1107': 'SBAS MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1111': 'QZSS MSM1 (DGNSS pseudorange)',
+  'rtcm3/1112': 'QZSS MSM2 (RTK pseudorange)',
+  'rtcm3/1113': 'QZSS MSM3 (code, carrier)',
+  'rtcm3/1114': 'QZSS MSM4 (code, carrier, CNR)',
+  'rtcm3/1115': 'QZSS MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1116': 'QZSS MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1117': 'QZSS MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1121': 'BeiDou MSM1 (DGNSS pseudorange)',
+  'rtcm3/1122': 'BeiDou MSM2 (RTK pseudorange)',
+  'rtcm3/1123': 'BeiDou MSM3 (code, carrier)',
+  'rtcm3/1124': 'BeiDou MSM4 (code, carrier, CNR)',
+  'rtcm3/1125': 'BeiDou MSM5 (code, carrier, doppler, CNR)',
+  'rtcm3/1126': 'BeiDou MSM6 (hi-res code, carrier, doppler)',
+  'rtcm3/1127': 'BeiDou MSM7 (hi-res code, carrier, doppler, CNR)',
+  'rtcm3/1230': 'GLONASS L1 and L2 code-phase biases',
+};
+
+export function describeMessageType(
+  type: string,
+  t: TranslateFn | undefined = undefined
+): string {
+  const description =
+    descriptions[type] ??
+    (type?.startsWith('rtcm2/')
+      ? `RTCMv2 message, type ${type.slice(6)}`
+      : type?.startsWith('rtcm3/')
+        ? `RTCMv3 message, type ${type.slice(6)}`
+        : `Unknown message, type ${type}`);
+  return t ? t(`rtkMessageType.${type}`, description) : description;
+}
+
+export function formatSurveyAccuracy(value: number, { max = 20 } = {}): string {
+  if (value > max) {
+    return `> ${max}m`;
+  }
+  if (value > 1) {
+    const ceiled = Math.ceil(value * 100) / 100;
+    return formatDistance(ceiled, 2);
+  }
+  const ceiled = Math.ceil(value * 1000) / 1000;
+  return formatDistance(ceiled, 1);
+}
+
+/**
+ * Checks if the RTK status indicates a valid fix.
+ *
+ * @param status - The RTK statistics object.
+ * @returns True if a valid fix is present, false otherwise.
+ */
+export function hasValidFix(
+  status: Pick<RTKStatistics, 'antenna' | 'survey'>
+): boolean {
+  const hasECEF = Array.isArray(status?.antenna?.positionECEF);
+  const accuracy = status?.survey?.accuracy;
+  const flags = status?.survey?.flags;
+  const surveyedCoordinateValid =
+    typeof flags === 'number' && (flags & 0b100) !== 0;
+
+  // Consider fix valid only with ECEF position, valid-coordinate flag, and numeric accuracy.
+  return hasECEF && surveyedCoordinateValid && typeof accuracy === 'number';
+}
+
+/**
+ * Determines whether the current coordinate should be saved for a given preset.
+ *
+ * @param position - The current antenna position.
+ * @param savedCoordinates - The record of saved coordinates keyed by preset ID.
+ * @param presetId - The ID of the preset to check against.
+ * @returns True if the coordinate is new and should be saved, false otherwise.
+ */
+export function shouldSaveCoordinate(
+  position: ECEFCoordinate | undefined,
+  savedCoordinates: Record<string, RTKSavedCoordinate[]>,
+  presetId: string
+): boolean {
+  const incomingECEF = Array.isArray(position)
+    ? position.slice(0, 3).map((x) => Math.round(x))
+    : undefined;
+  const saved = savedCoordinates?.[presetId];
+  const savedECEF =
+    saved && saved.length > 0 && Array.isArray(saved[0]?.positionECEF)
+      ? saved[0]?.positionECEF.slice(0, 3)
+      : undefined;
+
+  const isSameECEF =
+    !!incomingECEF && !!savedECEF && isEqual(incomingECEF, savedECEF);
+
+  return !isSameECEF;
+}
+
+/**
+ * Converts the overall RTK correction status to a semantic status enum.
+ */
+export function getSemanticsOfRTKStatus(
+  status: RTKCorrectionStatus
+): Status | undefined {
+  switch (status) {
+    case RTKCorrectionStatus.OK:
+      return Status.SUCCESS;
+
+    case RTKCorrectionStatus.NOT_CONNECTED:
+    case RTKCorrectionStatus.INACTIVE:
+      return undefined;
+
+    case RTKCorrectionStatus.CONNECTED_RECENTLY:
+    case RTKCorrectionStatus.SURVEY_IN_PROGRESS:
+      return Status.NEXT;
+
+    case RTKCorrectionStatus.ERROR:
+    case RTKCorrectionStatus.NO_ANTENNA_POSITION:
+      return Status.ERROR;
+
+    case RTKCorrectionStatus.NOT_ENOUGH_SATELLITES:
+      return Status.WARNING;
+
+    default:
+      return Status.WARNING;
+  }
+}
+
+/**
+ * Converts the overall RTK correction status to a color.
+ */
+export function getColorOfRTKStatus(
+  status: RTKCorrectionStatus
+): string | undefined {
+  const semantics = getSemanticsOfRTKStatus(status);
+  return semantics ? colorForStatus(semantics) : undefined;
+}
+
+/**
+ * Returns an icon preset for the given overall RTK correction status that can be
+ * used in a MiniListItem component
+ */
+export function getIconPresetForRTKStatus(
+  status: RTKCorrectionStatus
+): MiniListItemIconProps['preset'] {
+  switch (status) {
+    case RTKCorrectionStatus.OK:
+      return 'success';
+
+    case RTKCorrectionStatus.ERROR:
+    case RTKCorrectionStatus.NO_ANTENNA_POSITION:
+      return 'error';
+
+    case RTKCorrectionStatus.NOT_ENOUGH_SATELLITES:
+      return 'warning';
+
+    case RTKCorrectionStatus.CONNECTED_RECENTLY:
+    case RTKCorrectionStatus.SURVEY_IN_PROGRESS:
+      return 'connecting';
+
+    case RTKCorrectionStatus.NOT_CONNECTED:
+    case RTKCorrectionStatus.INACTIVE:
+      return 'empty';
+
+    default:
+      return 'warning';
+  }
+}
+
+const rtkCorrectionStatusLongDescriptions: Record<RTKCorrectionStatus, string> =
+  {
+    [RTKCorrectionStatus.CONNECTED_RECENTLY]:
+      'Determining RTK correction status...',
+    [RTKCorrectionStatus.ERROR]: 'Unspecified error in RTK corrections',
+    [RTKCorrectionStatus.INACTIVE]: 'No selected RTK correction source',
+    [RTKCorrectionStatus.NO_ANTENNA_POSITION]: 'RTK antenna position unknown',
+    [RTKCorrectionStatus.NOT_CONNECTED]: 'Not connected to server',
+    [RTKCorrectionStatus.NOT_ENOUGH_SATELLITES]:
+      'Not enough satellites with valid RTK corrections',
+    [RTKCorrectionStatus.OK]: 'RTK corrections are valid',
+    [RTKCorrectionStatus.SURVEY_IN_PROGRESS]: 'Survey in progress',
+  };
+
+const rtkCorrectionStatusShortDescriptions: Record<
+  RTKCorrectionStatus,
+  string
+> = {
+  [RTKCorrectionStatus.CONNECTED_RECENTLY]: 'Waiting for data',
+  [RTKCorrectionStatus.ERROR]: 'Error',
+  [RTKCorrectionStatus.INACTIVE]: 'No source',
+  [RTKCorrectionStatus.NO_ANTENNA_POSITION]: 'No antenna position',
+  [RTKCorrectionStatus.NOT_CONNECTED]: 'Not connected',
+  [RTKCorrectionStatus.NOT_ENOUGH_SATELLITES]: 'Not enough satellites',
+  [RTKCorrectionStatus.OK]: 'Valid',
+  [RTKCorrectionStatus.SURVEY_IN_PROGRESS]: 'Surveying',
+};
+
+/**
+ * Converts the overall RTK correction status to a human-readable description.
+ */
+export function describeRTKStatus(
+  status: RTKCorrectionStatus,
+  options: Partial<{ format: 'short' | 'long' }> = {},
+  t: TranslateFn | undefined = undefined
+): string {
+  const { format = 'long' } = options;
+  const descriptions =
+    format === 'long'
+      ? rtkCorrectionStatusLongDescriptions
+      : rtkCorrectionStatusShortDescriptions;
+  const description =
+    descriptions[status] ||
+    (format === 'long' ? 'Unknown RTK correction status' : 'Unknown status');
+  const namespace =
+    format === 'long'
+      ? 'rtkCorrectionStatus.long'
+      : 'rtkCorrectionStatus.short';
+  return t ? t(`${namespace}.${status}`, description) : description;
+}

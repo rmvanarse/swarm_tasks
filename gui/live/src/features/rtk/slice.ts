@@ -1,0 +1,261 @@
+/**
+ * @file Slice of the state object that stores data related to the currently
+ * selected RTK stream on the server.
+ */
+
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import type { RTKPresetType } from '@skybrush/flockwave-spec';
+import isEqual from 'lodash-es/isEqual';
+import isNil from 'lodash-es/isNil';
+
+import { noPayload } from '~/utils/redux';
+
+import type { RTKPresetEditorDialogMode } from './RTKPresetEditorDialog';
+import {
+  RTKAntennaPositionFormat,
+  type RTKSavedCoordinate,
+  type RTKStatistics,
+} from './types';
+
+type RTKPresetEditorDialogState = {
+  open: boolean;
+  mode: RTKPresetEditorDialogMode | undefined;
+  presetId: string | undefined;
+  presetType: RTKPresetType | undefined;
+};
+
+type RTKSliceState = {
+  stats: RTKStatistics;
+
+  /** Saved coordinates per RTK preset ID */
+  savedCoordinates: Record<string, RTKSavedCoordinate[]>;
+
+  currentPreset: {
+    id: string | undefined;
+    lastUpdatedAt: number | undefined;
+  };
+
+  dialog: {
+    open: boolean;
+    antennaPositionFormat: RTKAntennaPositionFormat;
+    surveySettingsEditorVisible: boolean;
+    /** Dialog for asking user if they want to use saved coordinates */
+    coordinateRestorationDialog: {
+      open: boolean;
+      presetId?: string;
+    };
+  };
+
+  presetEditorDialog: RTKPresetEditorDialogState;
+  presetsRefreshTrigger: number;
+};
+
+const initialState: RTKSliceState = {
+  stats: {
+    lastUpdatedAt: undefined,
+    satellites: {},
+    messages: {},
+    antenna: {
+      descriptor: undefined,
+      height: undefined,
+      position: undefined,
+      positionECEF: undefined,
+      serialNumber: undefined,
+      stationId: undefined,
+    },
+    survey: {
+      accuracy: undefined,
+      flags: 0,
+    },
+  },
+
+  savedCoordinates: {},
+
+  currentPreset: {
+    id: undefined,
+    lastUpdatedAt: undefined,
+  },
+
+  dialog: {
+    open: false,
+    antennaPositionFormat: RTKAntennaPositionFormat.LON_LAT,
+    surveySettingsEditorVisible: false,
+    coordinateRestorationDialog: {
+      open: false,
+      presetId: undefined,
+    },
+  },
+
+  presetEditorDialog: {
+    open: false,
+    mode: undefined,
+    presetId: undefined,
+    presetType: undefined,
+  },
+  presetsRefreshTrigger: 0,
+};
+
+const { actions, reducer } = createSlice({
+  name: 'rtk',
+  initialState,
+  reducers: {
+    closeRTKSetupDialog: noPayload<RTKSliceState>((state) => {
+      state.dialog.open = false;
+    }),
+
+    closeSurveySettingsPanel: noPayload<RTKSliceState>((state) => {
+      state.dialog.surveySettingsEditorVisible = false;
+    }),
+
+    showRTKSetupDialog: noPayload<RTKSliceState>((state) => {
+      state.dialog.open = true;
+    }),
+
+    resetRTKStatistics(state) {
+      state.stats.lastUpdatedAt = undefined;
+      state.stats.antenna = {};
+      state.stats.satellites = {};
+      state.stats.messages = {};
+      state.stats.survey = {};
+    },
+
+    setAntennaPositionFormat(
+      state,
+      action: PayloadAction<RTKAntennaPositionFormat>
+    ) {
+      state.dialog.antennaPositionFormat = action.payload;
+    },
+
+    toggleSurveySettingsPanel: noPayload<RTKSliceState>((state) => {
+      state.dialog.surveySettingsEditorVisible =
+        !state.dialog.surveySettingsEditorVisible;
+    }),
+
+    updateRTKStatistics(state, action: PayloadAction<RTKStatistics>) {
+      const { antenna, lastUpdatedAt, messages, satellites, survey } =
+        action.payload;
+
+      state.stats.antenna = antenna;
+      state.stats.lastUpdatedAt = lastUpdatedAt;
+      state.stats.messages = messages;
+
+      // Here we assume that a full CNR status update was sent by the server so
+      // if we don't see a satellite there, then it means that the satellite is
+      // gone
+      state.stats.satellites = satellites;
+
+      state.stats.survey ??= {};
+
+      if (!isNil(survey.accuracy)) {
+        state.stats.survey.accuracy = survey.accuracy;
+      }
+
+      if (!isNil(survey.flags)) {
+        state.stats.survey.flags = survey.flags;
+      }
+    },
+
+    openRTKPresetEditorDialog(
+      state,
+      action: PayloadAction<{
+        mode: 'create' | 'edit';
+        presetId?: string;
+        presetType?: RTKPresetType;
+      }>
+    ) {
+      state.presetEditorDialog.open = true;
+      state.presetEditorDialog.mode = action.payload.mode;
+      state.presetEditorDialog.presetId = action.payload.presetId;
+      state.presetEditorDialog.presetType = action.payload.presetType ?? 'user';
+    },
+
+    closeRTKPresetEditorDialog: noPayload<RTKSliceState>((state) => {
+      state.presetEditorDialog.open = false;
+      state.presetEditorDialog.mode = undefined;
+      state.presetEditorDialog.presetId = undefined;
+      state.presetEditorDialog.presetType = undefined;
+    }),
+
+    refreshRTKPresets: noPayload<RTKSliceState>((state) => {
+      state.presetsRefreshTrigger += 1;
+    }),
+
+    saveCoordinateForPreset(
+      state,
+      action: PayloadAction<{
+        presetId: string;
+        coordinate: RTKSavedCoordinate;
+      }>
+    ) {
+      const { presetId, coordinate } = action.payload;
+
+      state.savedCoordinates[presetId] ??= [];
+
+      const existing = state.savedCoordinates[presetId];
+
+      const duplicateIndex = existing.findIndex((c) =>
+        isEqual(c.positionECEF, coordinate.positionECEF)
+      );
+
+      if (duplicateIndex !== -1) {
+        existing.splice(duplicateIndex, 1);
+      }
+
+      existing.unshift(coordinate);
+
+      if (existing.length > 5) {
+        existing.pop();
+      }
+    },
+
+    _setCurrentRTKPresetIdAndTimestamp(
+      state,
+      action: PayloadAction<{ id: string | undefined; lastUpdatedAt: number }>
+    ) {
+      state.currentPreset = {
+        ...state.currentPreset,
+        ...action.payload,
+      };
+    },
+
+    clearAllSavedCoordinates(state) {
+      state.savedCoordinates = {};
+    },
+
+    // Coordinate restoration dialog management
+    showCoordinateRestorationDialog(state, action: PayloadAction<string>) {
+      const presetId = action.payload;
+      state.dialog.coordinateRestorationDialog = {
+        open: true,
+        presetId,
+      };
+    },
+
+    closeCoordinateRestorationDialog: noPayload<RTKSliceState>((state) => {
+      state.dialog.coordinateRestorationDialog = {
+        open: false,
+        presetId: undefined,
+      };
+    }),
+  },
+});
+
+export const {
+  closeRTKPresetEditorDialog,
+  closeRTKSetupDialog,
+  closeSurveySettingsPanel,
+  openRTKPresetEditorDialog,
+  refreshRTKPresets,
+  saveCoordinateForPreset,
+  clearAllSavedCoordinates,
+  closeCoordinateRestorationDialog,
+  resetRTKStatistics,
+  setAntennaPositionFormat,
+  showCoordinateRestorationDialog,
+  showRTKSetupDialog,
+  toggleSurveySettingsPanel,
+  updateRTKStatistics,
+  _setCurrentRTKPresetIdAndTimestamp,
+} = actions;
+
+export default reducer;

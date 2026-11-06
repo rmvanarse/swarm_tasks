@@ -8,3 +8,4 @@ Each module will return a Cmd object only
 """
 
 import swarm_tasks.modules.aggregation
+import swarm_tasks.modules.coverage_pattern

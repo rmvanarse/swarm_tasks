@@ -1,0 +1,30 @@
+[version]
+current = "2.58.2"
+regex = '''
+  (?P<major>\d+)
+  \.
+  (?P<minor>\d+)
+  \.
+  (?P<patch>\d+)
+  '''
+
+[git]
+message_template = "chore: bumped version to {new_version}"
+tag_template = "{new_version}"
+
+[[file]]
+src = "pyproject.toml"
+search = 'version = "{current_version}"'
+
+[[file]]
+src = "src/flockwave/server/version.py"
+version_template = "({major}, {minor}, {patch})"
+search = "__version_info__ = {current_version}"
+
+[[before_commit]]
+name = "Run tests and pre-commit hooks"
+cmd = "uv sync && uv run pytest && prek run --all-files"
+
+[[after_push]]
+name = "Build tarball"
+cmd = "uv build"

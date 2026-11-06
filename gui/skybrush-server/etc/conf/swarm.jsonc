@@ -1,0 +1,46 @@
+{
+  "EXTENSIONS": {
+    "http_server": {
+      "host": ""
+    },
+
+    // Stream A: each drone's serial1 MAVLink feed (udpclient to port 14550 on
+    // this machine) lands here. This is what Skybrush Live shows: position,
+    // battery, mode, and the stock arm/takeoff/RTL controls.
+    "mavlink": {
+      "enabled": true,
+      "networks": {
+        "mav": {
+          "connections": ["default"]
+        }
+      }
+    },
+
+    // Offline maps: Live asks this extension for map tiles, which it downloads
+    // once, keeps on disk and serves again when the server has no internet.
+    // Put the Mapbox token in the MAPBOX_ACCESS_TOKEN environment variable (do
+    // not commit it here), or leave it unset to use the key from Live's
+    // Settings -> API keys. Turn on "Use cached map tiles" in Toolbox ->
+    // Offline maps, and pan over the area while online to fill the cache.
+    "map_cache": {
+      "enabled": true
+    },
+
+    // Stream B stays between the drones and main.py (swarm code). This
+    // extension only forwards swarm operations (goal, search, split, stop...)
+    // from Live to main.py over UDP.
+    "swarm_bridge": {
+      "enabled": true,
+      // Where main.py listens for commands: the IP it prints as "Ip address:"
+      // at startup (run_main.bat's bind IP). 172.24.96.1 is the Windows-side
+      // WSL address for local SITL testing; on the real two-machine setup it
+      // is the swarm-master machine's IP.
+      "command_host": "192.168.2.184",
+      "command_port": 12008,
+      // Skybrush UAV id (MAVLink system id) -> main.py id, for drones whose
+      // two ids differ. Ids not listed are passed through unchanged. Example:
+      // "id_map": { "11": "1", "12": "2", "13": "3" }
+      "id_map": {}
+    }
+  }
+}

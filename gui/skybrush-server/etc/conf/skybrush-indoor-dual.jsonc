@@ -1,0 +1,32 @@
+// This is the main configuration file for Skybrush Server, pre-configured
+// for indoor shows with Crazyflie drones and multiple radios.
+//
+// The file is essentially a JSON file, but C-style comments are allowed, and
+// lines starting with a hash are ignored.
+
+{
+  "EXTENSIONS": {
+    // Make the server listen on all interfaces so it can be connected to from
+    // other machines
+    "http_server": {
+      "host": ""
+    },
+
+    // Listen for Crazyflie drones
+    "crazyflie": {
+      "enabled": true,
+      "connections": [
+        "crazyradio://0/70/2M/E7E7E7E7",
+        "crazyradio://1/75/2M/E7E7E7E7"
+      ],
+      "fence": {
+        "enabled": false
+      }
+    },
+
+    // Start shows automatically by default, don't expect an RC to be present
+    "show": {
+      "default_start_method": "auto"
+    }
+  }
+}

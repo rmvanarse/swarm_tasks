@@ -1,0 +1,233 @@
+from enum import Enum
+
+from bidict import bidict
+from flockwave.spec.schema import get_complex_object_schema
+
+from flockwave.server.model.metamagic import ModelMeta
+
+from .utils import enum_to_json
+
+__all__ = ("PreflightCheckInfo",)
+
+
+class PreflightCheckResult(Enum):
+    """Possible outcomes for a single preflight check item."""
+
+    OFF = "off"
+    PASS = "pass"
+    WARNING = "warning"
+    RUNNING = "running"
+    SOFT_FAILURE = "softFailure"
+    FAILURE = "failure"
+    ERROR = "error"
+
+    @property
+    def failed(self) -> bool:
+        """Returns whether the preflight check has failed, including
+        "soft" failures that may resolve themselves on their own.
+        """
+        return self in (
+            self.SOFT_FAILURE,
+            self.FAILURE,
+            self.ERROR,
+        )
+
+    @property
+    def failed_conclusively(self) -> bool:
+        """Returns whether the preflight check failed conclusively, i.e. it is
+        unlikely that the problem indicated by the preflight check would
+        resolve itself without human intervention.
+        """
+        return self in (self.FAILURE, self.ERROR)
+
+    @property
+    def passed(self) -> bool:
+        """Returns whether the preflight check has passed or is turned off.
+        Preflight checks with warnings are considered to have passed.
+        """
+        return self in (
+            self.PASS,
+            self.WARNING,
+            self.OFF,
+        )
+
+    @property
+    def passed_without_warnings(self) -> bool:
+        """Returns whether the preflight check has passed without warnings
+        or is turned off. Preflight checks with warnings are considered
+        _not_ to have passed.
+
+        """
+        return self in (
+            self.PASS,
+            self.OFF,
+        )
+
+
+_numeric_preflight_check_results = bidict(
+    {
+        PreflightCheckResult.OFF: 0,
+        PreflightCheckResult.PASS: 10,
+        PreflightCheckResult.WARNING: 20,
+        PreflightCheckResult.RUNNING: 30,
+        PreflightCheckResult.SOFT_FAILURE: 40,
+        PreflightCheckResult.FAILURE: 50,
+        PreflightCheckResult.ERROR: 60,
+    }
+)
+"""Ordering of preflight check results; used when summarizing the results of a
+preflight checklist into a single result value. Larger values take precedence
+over smaller ones."""
+
+
+class PreflightCheckItem(metaclass=ModelMeta):
+    """Class representing a single item in a detailed preflight check report."""
+
+    class __meta__:
+        schema = get_complex_object_schema("preflightCheckItem")
+        mappers = {"result": enum_to_json(PreflightCheckResult)}
+
+    def __init__(
+        self,
+        id: str,
+        label: str | None = None,
+        result: PreflightCheckResult = PreflightCheckResult.OFF,
+    ):
+        self.id = id
+        self.label = label
+        self.result = result
+
+
+class PreflightCheckInfo(metaclass=ModelMeta):
+    """Class representing the detailed result of the preflight checks on a
+    single UAV.
+    """
+
+    class __meta__:
+        schema = get_complex_object_schema("preflightCheckInfo")
+        mappers = {"result": enum_to_json(PreflightCheckResult)}
+
+    items: list[PreflightCheckItem]
+
+    def __init__(self):
+        self._in_progress = False
+        self.message = ""
+        self.result = PreflightCheckResult.OFF
+        self.items = []
+        self.update_summary()
+
+    def add_item(
+        self,
+        id: str,
+        label: str | None = None,
+        result: PreflightCheckResult = PreflightCheckResult.OFF,
+    ) -> None:
+        self.items.append(PreflightCheckItem(id=id, label=label, result=result))
+        self.update_summary()
+
+    def _get_result_from_items(self) -> tuple[PreflightCheckResult, bool]:
+        """Returns a single preflight check result summary based on the results
+        of the individual items, and whether there is at least one check that
+        is still running.
+        """
+        if not self.items:
+            return PreflightCheckResult.OFF, False
+
+        running = any(
+            item.result is PreflightCheckResult.RUNNING for item in self.items
+        )
+        result = max(
+            _numeric_preflight_check_results.get(item.result, 0) for item in self.items
+        )
+        return _numeric_preflight_check_results.inverse[result], running
+
+    def clear(self) -> None:
+        """Clears the preflight check items."""
+        del self.items[:]
+        self.update_summary()
+
+    @property
+    def failed(self) -> bool:
+        """Returns whether at least one preflight check has failed, including
+        "soft" failures that may resolve themselves on their own.
+        """
+        return self.result.failed
+
+    @property
+    def failed_conclusively(self) -> bool:
+        """Returns whether the preflight checks failed conclusively, i.e. it is
+        unlikely that the problems indicated by the preflight checks would
+        resolve themselves without human intervention.
+        """
+        return self.result.failed_conclusively
+
+    @property
+    def has_items(self) -> bool:
+        """Returns whether the prelight check object has at least one item."""
+        return bool(self.items)
+
+    @property
+    def in_progress(self) -> bool:
+        """Returns whether the preflight checks are currently in progress (i.e.
+        if there is at least one item where the status indicates that it is
+        still in progress).
+        """
+        return self._in_progress
+
+    @property
+    def passed(self) -> bool:
+        """Returns whether all the preflight checks have passed or are turned
+        off. Preflight checks with warnings are considered to have passed.
+
+        Also returns true if there are no preflight checks configured.
+        """
+        if self.in_progress:
+            return False
+        else:
+            return self.result.passed
+
+    @property
+    def passed_without_warnings(self) -> bool:
+        """Returns whether all the preflight checks have passed without warnings
+        or are turned off. Preflight checks with warnings are considered
+        _not_ to have passed.
+
+        Also returns true if there are no preflight checks configured.
+        """
+        if self.in_progress:
+            return False
+        else:
+            return self.result.passed_without_warnings
+
+    def get_result(self, id: str) -> PreflightCheckResult:
+        """Returns a single preflight check result for the given individual id."""
+        for item in self.items:
+            if item.id == id:
+                return item.result
+
+        return PreflightCheckResult.OFF
+
+    def set_result(
+        self, id: str, result: PreflightCheckResult, label: str | None = None
+    ) -> None:
+        """Updates the result of a single preflight check in this preflight
+        check report.
+        """
+        changed = False
+
+        for item in self.items:
+            if item.id == id:
+                if item.result != result:
+                    item.result = result
+                    changed = True
+                item.label = label or None
+                break
+
+        if changed:
+            self.update_summary()
+
+    def update_summary(self) -> None:
+        """Updates the summary of this preflight check report based on the
+        results of the individual preflight check items.
+        """
+        self.result, self._in_progress = self._get_result_from_items()

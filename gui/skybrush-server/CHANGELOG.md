@@ -1,0 +1,1543 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.58.2] - 2026-10-20
+
+### Changed
+
+- Dropped support for Python 3.10 as it is now EOL. Not considered a major version
+  bump as the server is meant to be an application, not a library.
+
+- Restored `skybrush-ext-webui` 1.1.0. Packaging issues will be resolved in a
+  separate patch release if needed.
+
+- Updated `certifi` to 2026.10.19 in response to the eMudhra security incident.
+
+## [2.57.3] - 2026-10-20
+
+### Fixed
+
+- The `http` and `frontend` extensions now work on Python 3.14 and later. They
+  previously failed to load because they relied on `importlib.abc.ResourceReader`,
+  which was removed in Python 3.14.
+
+- Replaced the deprecated `asyncio.iscoroutinefunction()` with
+  `inspect.iscoroutinefunction()` in the vendored Engine.IO ASGI driver.
+
+- User-defined RTK presets are now always read and written as UTF-8, independently
+  of the locale settings of the platform.
+
+## [2.57.2] - 2026-10-15
+
+### Fixed
+
+- The `extra` field associated to drones in `.skyc` files now survives the addition
+  of a collective RTH plan in the server.
+
+- Show orientation is now taken modulo 360 when doing a show upload to MAVLink drones.
+  This is needed because the firmware of the drones expects the orientation to be in
+  this range.
+
+## [2.57.1] - 2026-10-14
+
+### Fixed
+
+- Temporarily reverted `skybrush-ext-webui` to 1.0.1 because 1.1.0 seems to have
+  some issues when the app is packaged into an executable. This will be fixed soon.
+
+- Updated `flockwave-gps` to pin `bitstring` to version 4 because version 5 brings
+  in some API-breaking changes.
+
+## [2.57.0] - 2026-10-14
+
+### Added
+
+- The `mavlink` extension was refactored to have explicit subclasses for
+  ArduCopter-, ArduPlane- and ArduRover-based vehicles (for the time being).
+  This refactor includes many enhancements, like proper `mode ...` command handling
+  for non-copter vehicles, proper custom mode definitions in general, proper
+  recognition of vehicle types into their corresponding autopilot handlers.
+  Basic VTOL support is also tested in simulator with standard ArduPlane 4.7
+  firmware.
+
+### Changed
+
+- Default accuracy threshold in the `timesync` extension was changed from 50 msec to
+  100 msec. Field tests have shown that a threshold of 50 msec often yields false
+  positive warnings even with recently synchronized clocks.
+
+- The `ArduPilotWithSkybrush` class was renamed to `ArduCopterWithSkybrush`
+  to be consistent with the new autopilot class hierarchy.
+
+- The `autopilot_type` setting of the `mavlink` extension now accepts
+  `arducopter`, `arduplane` and `ardurover` in addition to `skybrush` and `px4`.
+  `ardupilot` is deprecated and is now equivalent to `auto`.
+
+### Fixed
+
+- MAVLink heartbeat messages are now filtered correctly so that heartbeats from
+  non-vehicle MAVLink components (GCS, gimbals, cameras, ADS-B receivers etc.) are
+  ignored. Heartbeats with `MAV_TYPE` values not known to the server no longer
+  raise an exception in the MAVLink message handler. `MAV_TYPE` values of ground
+  rovers, generic multirotors, spacecraft orbiters, ground quadrupeds and VTOL
+  gyrodynes are now also recognized as vehicles.
+
+- The `ArduRover` autopilot class no longer accepts the `learning`, `pos` and
+  `brake` custom mode aliases; their mode numbers were incorrect.
+
+## [2.56.0] - 2026-10-08
+
+### Changed
+
+- The web-based configuration user interface (the `webui` extension) was moved out of
+  the server into its own package named `skybrush-ext-webui`. The server depends on
+  this package so it is still installed and loaded automatically; the configuration
+  options of the extension (`route` and `public`) are unchanged.
+
+## [2.55.1] - 2026-10-06
+
+### Fixed
+
+- `show_pro` extension now refers to the correct version that should be used with
+  the new show encoding hook API. This version restores the functionality that
+  was broken intentionally in the previous release.
+
+## [2.55.0] - 2026-10-06
+
+See caveats below regarding the `show_pro` extension and the encoding of pyro,
+collective RTH and yaw control. Do not use this server version in production if you rely
+on these features.
+
+### Changed
+
+- `encode_show()` API changed slightly: the hook functions now take the show
+  specification and a show file builder object as parameters. The builder is responsible
+  for collecting the events that will be stored in a common event list of the produced
+  show file.
+
+- Removed `show_pro`-specific code from the show encoding process; it is now the
+  responsibility of the `show_pro` extension to register its own encoding hooks to add
+  support for pyro, collective RTH and yaw control. Since the new version of `show_pro`
+  must depend on _this_ version of the server to make this possible, **the encoding of
+  pyro, collective RTH and yaw control is temporarily broken in this server release**.
+  This is intentional, and it will be fixed in the next release of the `show_pro`
+  extension.
+
+## [2.54.0] - 2026-10-02
+
+### Added
+
+- The collective RTH plan now contains the minimum RTH altitude of the entire
+  swarm. This allows the operator to validate whether the RTH altitudes are
+  high enough at the location where the show will be performed.
+
+- The `mavlink` extension now exposes a function named `broadcast_packet()` that
+  can be used to inject arbitrary MAVLink packets into the output stream of all
+  configured MAVLink networks. This is primarily meant as an ad-hoc escape hatch
+  for other extensions if they need to send extra data to MAVLink drones.
+
+- The `show` extension now exposes a function named `encode_show()` that can take a
+  show specification and encode it into a `.skyb` file. Other extensions using the
+  Skybrush binary file format to upload the show can now use this function instead of
+  re-implementing the encoding logic themselves. The function now also acts as a
+  central gatekeeper for show file features that are limited to pro users only.
+  Note: the function API is still evolving and changes to the API will not be considered
+  a breaking change until the next _official_, bundled release of the server.
+
+- Added support for the new metadata and GCS light control setup blocks in `.skyb`
+  files, to a limited extent. Metadata is not used yet but will be used in the future
+  to let each drone know which show it is flying and which slot it is assigned to
+  in the show. GCS based interactive light control will probably be a pro feature.
+
+## [2.53.2] - 2026-09-16
+
+### Fixed
+
+- Fixed a crash during the registration of time sources while switching RTK presets.
+
+## [2.53.1] - 2026-09-14
+
+### Removed
+
+- Removed unused `World` class and the `world` property of `SkybrushServer`. This was
+  never used for anything and the entire concept was experimental, therefore we do not
+  consider this a breaking change.
+
+## [2.53.0] - 2026-09-14
+
+### Changed
+
+- Updated protocol specification for experimental collective RTH planning messages,
+  no user-facing changes.
+
+## [2.52.0] - 2026-09-11
+
+### Added
+
+- Added `SkybrushServer.run_async_function_and_dispatch_messages()` to provide a
+  central facility for handling async operations with single-object async responses
+  according to the Flockwave protocol specification.
+
+### Fixed
+
+- The `http` extension now handles single-object and multi-object async responses
+  in the same way, waiting for the responses to arrive before returning them.
+
+## [2.51.0] - 2026-09-07
+
+### Added
+
+- Added `ProgressReporter.for_thread()` to create a `ProgressReporter` that is suitable
+  for tasks that are delegated to a separate worker thread not running an event loop.
+
+- Added `ProgressReporter.for_task()` to create a `ProgressReporter` that is suitable
+  for tasks that are delegated to a separate async task running in the same event loop
+  as the main thread.
+
+### Changed
+
+- The plain `ProgressReporter()` constructor is now deprecated in favour of
+  `ProgressReporter.for_thread()` and `ProgressReporter.for_task()`.
+
+## [2.50.0] - 2026-08-14
+
+### Added
+
+- Gateway now allows the generation of worker URLs from a template.
+
+- Crazyflie drones can now indicate whether their motors are running or not. Requires
+  the latest Crazyflie firmware (2026.04 or later).
+
+### Changed
+
+- The HTTP API provided by the `http` extension now waits for multi-object async
+  operations to complete and collects the results in the returned HTTP response. This
+  makes it simpler to handle multi-object async operations as there is no need to
+  chase response receipts any more.
+
+- Crazyflie extension now requires a firmware that is based on Crazyflie firmware
+  2026.04 or later.
+
+- Deprecated the `DroneShowStatus.testing` property in the Crazyflie extension in
+  favour of `DroneShowStatus.locked`.
+
+### Fixed
+
+- Crazyflie drones now return an empty log list instead of bailing out with an error.
+
+## [2.49.1] - 2026-07-15
+
+### Fixed
+
+- MAVLink RC override packets are now broadcast. This fixes the broken simulated
+  RC handling for MAVLink drones.
+
+## [2.49.0] - 2026-07-06
+
+### Changed
+
+- Updated protocol specification package, no visible changes for the end user.
+
+## [2.48.0] - 2026-07-05
+
+### Added
+
+- Added `timesync` extension that contains the core logic for determining whether the
+  clock of the server is in sync with the world clock. Other extensions may register
+  themselves as time sources in the `timesync` extension and submit world clock
+  timestamps or estimated offsets, while the `timesync` extension takes care of
+  maintaining a global time synchronization state and informing clients if the clock
+  seems to be not in sync with the world clock.
+
+### Changed
+
+- When MAVLink drones are waiting on the ground before a show, the start time of the
+  show has passed _and_ the current time has not reached the designated takeoff time of
+  the drone, show "Waiting for takeoff time" instead of "Coutdown to start time" in
+  the Details column in Skybrush Live to reassure the operator that the drone will
+  take off when the time comes.
+
+- Increased maximum WebSocket message size to 100 MB by default.
+
+- The `rtk` extension now uses the facilities provided by the `timesync` extension to
+  allow GPS packet timestamps to be used as world clock time estimates.
+
+### Fixed
+
+- Encoding of log files is now always UTF-8, irrespectively of the native file encoding
+  of the current platform. This is to ensure that UTF-8 characters are printed properly
+  in log files on Windows instead of dumping an error on the console.
+
+### Deprecated
+
+- In earlier versions, `SYS-MSG` messages were emitted when the server determined that
+  its local clock is probably not in sync with GPS time. These messages are now
+  deprecated and will _not_ be emitted from the next minor version. Clients should
+  update to use the newly added `TIMESYNC-STATUS` message instead, which provides more
+  detailed information about the time synchronization state of the server.
+
+## [2.47.1] - 2026-06-20
+
+### Added
+
+- Added more detailed logging to time axis configuration packets (pro edition only).
+
+### Fixed
+
+- `ClockSynchronizationHandler` was changed such that it does not stop the secondary
+  clock beyond its point of no return even if the primary clock was stopped. This
+  prevents lost MIDI timecode links from stopping the show clock when the show was
+  started based on MIDI timecode. If you want to stop the show clock in such cases,
+  clear the show start time from Skybrush Live instead. We consider this a bugfix
+  instead of a breaking change because the previous behaviour was undesired and went
+  against user expectations.
+
+## [2.47.0] - 2026-06-03
+
+### Added
+
+- Start time of the show can now be set with sub-second precision. Required for
+  accurate show starts based on MIDI timecode.
+
+## [2.46.0] - 2026-04-01
+
+### Added
+
+- It is now possible to trigger a collective RTH when the show is suspended.
+
+## [2.45.1] - 2026-03-24
+
+### Fixed
+
+- Compass-motor interference calibration now queries the `RCMAP_THROTTLE` parameter
+  to determine the RC channel index to use for adjusting the throttle during the
+  calibration.
+
+- Fixed a bug in collective RTH plan calculations where the drones were taking off
+  later than T=0. The bug affected only the part of the collective RTH plan before
+  the takeoff itself.
+
+## [2.45.0] - 2026-03-21
+
+### Changed
+
+- High ESC error rates reported by the UAV now received a new, separate error code
+  (`ESC`, numeric value: 142). Earlier versions used the "motor malfunction" error code,
+  which was misleading and also complicated the logic that updated the error codes in
+  the MAVLink extension.
+
+## [2.44.1] - 2026-03-20
+
+### Added
+
+- Added compass-motor interference calibration. This is a potentially dangerous
+  operation as it has to be performed with the propellers attached to the drone,
+  so it is not exposed to the UI of Live yet.
+
+## [2.43.0] - 2026-03-18
+
+### Changed
+
+- Refinements to the suspend, resume and collective RTH functionality, including a
+  change in the format used to store the collective RTH plan on the drone. This is
+  not considered a breaking change because the functionality is still experimental.
+
+## [2.42.0] - 2026-02-24
+
+### Added
+
+- Started adding functionality for warping the time axis of the show to facilitate
+  suspend, resume and collective RTH. Functionality is still experimental.
+
+## [2.41.1] - 2026-02-23
+
+### Changed
+
+- Updated `skybrush-ext-sidekick` dependency, completing the process of allowing
+  Sidekick to transmit show control packets over radio as a redundant link.
+
+## [2.41.0] - 2026-02-23
+
+### Added
+
+- Added a `show` route to the routing configuration of MAVLink networks so the user
+  can now decide which connection(s) to route the drone show control packet to.
+
+- Added a `mavlink:show_control` signal dispatched from the MAVLink extension. This
+  signal can be used by other extensions to subscribe to all show control packets
+  (start time, authorization state, LED lights) that are related to drone show
+  control.
+
+### Fixed
+
+- Fixed a bug that made MAVLink drones return "No version information available"
+  for version queries when their autopilot type was pre-defined in the configuration
+  file.
+
+## [2.40.3] - 2025-12-27
+
+### Changed
+
+- When sending a shutdown request to a MAVLink drone, we now set parameter 6 of the
+  `MAV_CMD_PREFLIGHT_SHUTDOWN` command to the magic value that forces a shutdown
+  even if the drone is airborne (at least on ArduPilot-based drones). Note that this
+  does not change the _physical_ behaviour of the drone as we already send a forced
+  motor-off command before the shutdown command, which has already ensured a drastic
+  shutdown anyway via physical means.
+
+### Fixed
+
+- Fixed a bug that made the server incorrectly report `mode 127` as the flight mode
+  for Skybrush-based drones when they were set to drone show flight mode.
+
+- Fixed a bug that prevented the server from starting an RTK survey with alternative
+  settings.
+
+## [2.40.2] - 2025-12-11
+
+### Fixed
+
+- Fixed a bug in the show adaptation feature that sometimes altered the
+  trajectories in the show slightly.
+
+## [2.40.0] - 2025-12-05
+
+### Added
+
+- The auto-recharging mechanism of the batteries of virtual UAVs can now be
+  disabled from the configuration of the `virtual_uavs` extension.
+
+### Changed
+
+- When a drone goes to sleep mode, the stored GPS fix is now cleared in order
+  not to mislead the operator about the state of the GPS. The position
+  remains set to ensure that the drone is still visible on the map on the GCS.
+
+- When a drone resumes from sleep mode, we now clear the stored position,
+  velocity and attitude data because the next update should arrive soon anyway.
+
+## [2.39.4] - 2025-12-01
+
+### Added
+
+- Rovers are now recognized by the ArduPilot autopilot driver in the MAVLink
+  extension and the proper modes are displayed on the Live UI, thanks to
+  [@r0n4n](https://github.com/r0n4n) in PR
+  [#12](https://github.com/skybrush-io/skybrush-server/pull/12/files)
+
+### Fixed
+
+- Fixed the geofence warning flag sometimes getting stuck when using Skynet
+  optimizations.
+
+## [2.39.2] - 2025-11-25
+
+### Fixed
+
+- Fixed a case when the error set of a UAV was modified while being iterated over.
+  This happened when the UAV resumed from a sleeping or inactive state but it was
+  otherwise harmless (it just seemed scary on the console).
+
+## [2.39.0] - 2025-11-23
+
+### Added
+
+- Extensions can now teach the `mavlink` extension how to handle connection types
+  beyond the usual UDP, TCP and serial connections.
+
+### Changed
+
+- `studio` extension was updated to link to `skybrush-studio` 5.5.0 to support
+  setting light configurations when adapting shows.
+
+## [2.38.1] - 2025-11-17
+
+### Fixed
+
+- Performance improvements during the show upload process: avoid async IO functions
+  when the underlying buffer is entirely in memory.
+
+## [2.38.0] - 2025-11-14
+
+### Added
+
+- Virtual UAVs now pretend that they support compass calibration.
+
+### Changed
+
+- `skynet` was updated to 0.5.0 to provide more optimizations for large-scale swarm
+  deployments.
+
+- Error codes on UAVs are now stored in an `ErrorSet` instead of a list of integers.
+  Extension authors accessing the `error` property of the `UAVState` object
+  directly should check their code and update if needed. We do not consider this
+  a breaking change as the `ErrorSet` object provides a similar interface and
+  direct manipulation of the `error` property was not supported in earlier
+  versions either.
+
+## [2.37.0] - 2025-10-30
+
+### Added
+
+- Added support for reporting high ESC failure rates as motor errors for MAVLink
+  drones. This feature requires a yet unreleased version of the firmware because
+  the drone needs to transmit a status flag that indicates high ESC error rates.
+
+### Changed
+
+- Raise an exception when trying to set geofence limits that are over the
+  thresholds recommended by the ArduPilot documentation. Altitude limit
+  raised to 3000m as there seemed to be at least one case where a value larger
+  than ArduPilot's own documented limit (1000m) was needed.
+
+### Fixed
+
+- Better error messages when starting Skybrush Server on a machine where another
+  process already keeps the main Skybrush Server port occupied. The error message
+  now gives a hint to users about other well-known applications that might keep
+  the port busy.
+
+## [2.36.1] - 2025-10-08
+
+### Fixed
+
+- `skynet` is not a mandatory dependency any more; it belongs to the pro
+  version only.
+
+## [2.36.0] - 2025-10-02
+
+### Added
+
+- The MAVLink extension now exports a function that can be used to get a handle
+  to a MAVLink network object from another extension. This will be used by the
+  Sidekick extension from this version onwards to provide a more accurate
+  mapping from system IDs to UAV IDs in case of more than 250 drones.
+
+- The sizes of MAVLink networks managed by the MAVLink extension can now be
+  limited. The default limit is 250 drones per network, from system ID 1 to
+  system ID 250 (inclusive). This is identical to the typical setup used in
+  drone shows. If you use drones with system IDs larger than 250, you must
+  adjust the network size accordingly in the configuration file.
+
+### Fixed
+
+- Fixed a bug in the MAVLink geofence upload protocol that sometimes reported a
+  successful geofence upload when the last packet in the upload sequence was
+  received out-of-order by the UAV.
+
+## [2.35.0] - 2025-09-04
+
+### Added
+
+- Added support for bulk parameter uploads with the `PRM-SET-MANY` command in
+  the protocol. UAV drivers that do not implement bulk parameter uploads will
+  fall back to single uploads in alphabetical order of the parameters.
+
+- The `mavlink` extension now supports bulk parameter uploads for ArduPilot
+  via MAVFTP. This needs to be turned on explicitly for the time being because
+  ArduPilot does not signal parameter upload failures correctly to the GCS when
+  using bulk uploads. The feature will be enabled permanently when the issue is
+  fixed in ArduPilot itself.
+
+## [2.34.0] - 2025-08-22
+
+### Added
+
+- Added `skynet`, an extension that provides support for high-performance
+  MAVLink parsing and routing to allow the server to scale up to 5000 drones
+  and beyond. This extension is currently in an experimental phase and no
+  configuration or documentation is provided yet; let us know if you own a large
+  fleet and you are interested in testing the extension at a large scale and
+  we will help you set things up.
+
+### Changed
+
+- Started implementation of a more compact telemetry format for MAVLink links.
+
+- Weather providers can now have an associated priority when they are registered.
+
+- The takeoff time configuration and authorization logic is now separated from
+  the `mavlink` extension so it became reusable in other extensions that provide
+  support for a certain type of drone.
+
+### Fixed
+
+- `uv sync` should now work consistently out-of-the-box after the repository is
+  checked out, even if the user has no access to private components of the
+  server.
+
+## [2.33.1] - 2025-08-15
+
+### Fixed
+
+- Improved resilience of geofence upload process to cases when packets are
+  arriving delayed or out-of-order on the drone.
+
+## [2.33.0] - 2025-08-11
+
+### Added
+
+- Added configuration options to the MAVLink extension to skip the initial
+  autopilot version discovery handshake and the configuration of MAVLink
+  stream rates if needed. These options can be used to achieve faster
+  initialization for large swarms consisting of thosands of drones.
+
+- Added a "Version info" page to the web UI that can be used to discover the
+  version number of all Python packages that the server depends on.
+
+### Changed
+
+- `UAV-INF` and `SYS-MSG` messages are now rate-limited at 5 Hz to reduce traffic
+  between Live and the server.
+
+- MAVFTP file uploads now use an adaptive timeout that tries to estimate the
+  round-trip time of the connection with an algorithm similar to how the TCP
+  protocol deals with it.
+
+- When logging messages from the MAVLink module, use the drone ID if it is
+  available instead of the MAVLink network and system ID.
+
+### Fixed
+
+- Fixed a bug in the pyro event encoder function of the show file encoder that
+  sometimes produced events out of order.
+
+- Autopilot version requests from the MAVLink module are now constrained to
+  at most one request in 2 seconds.
+
+## [2.32.3] - 2025-07-31
+
+### Changed
+
+- MAVFTP file upload timeouts are now adaptive similarly to how TCP connections
+  handle retransmissions.
+
+### Fixed
+
+- Better (more robust) handling of glitchy SMPTE timecodes. Timecodes with
+  invalid hour components (larger than 23) are now ignored.
+
+## [2.32.2] - 2025-07-21
+
+### Fixed
+
+- Revived the `flockwave.server.gateway` module that is currently used for the
+  Skybrush Live online demo on <https://account.skybrush.io>
+
+## [2.32.1] - 2025-07-17
+
+### Changed
+
+- JSON parsing and decoding is now performed with `orjson` instead of the
+  built-in `json` module.
+
+### Fixed
+
+- Fixed an irrelevant exception that appeared when the server was shut down
+  while a MAVFTP file upload was in progress.
+
+## [2.32.0] - 2025-07-01
+
+### Added
+
+- Virtual UAVs can now enter sleep mode.
+
+- Added instrumentation support with the `SKYBRUSH_INSTRUMENTS` environment
+  variable. This is mostly useful for developers only.
+
+### Changed
+
+- Performance improvements in the parsing of MAVLink messages.
+
+- The receive buffer size of UDP listener connections (used by the MAVLink module)
+  is now increased to the maximum value allowed by the operating system. This
+  helps in preventing dropped UDP packets when the system is under high load.
+
+## [2.31.0] - 2025-06-23
+
+### Added
+
+- Added camera shutter test for MAVLink-based drones.
+
+### Fixed
+
+- Fixed name of configuration key for the point of no return in show clock
+  synchronization, introduced in 2.30.0.
+
+## [2.30.0] - 2025-06-23
+
+### Added
+
+- Servo channels can now be set explicitly for MAVLink-based drones with the
+  `servo` command from the Messages panel in Live. The command has two
+  parameters: the servo index (1-based) and the PWM value of the channel (in
+  microseconds).
+
+### Changed
+
+- When synchronizing the show clock to a MIDI timecode, we now have a "point of
+  no return" threshold. Adjustments to the MIDI clock are not reflected in the
+  state of the show clock if the show clock is running and it is beyond the
+  point of no return. However, the show clock is stopped if the MIDI clock is
+  stopped even if the show clock is beyond the point of no return.
+
+## [2.29.0] - 2025-06-15
+
+### Added
+
+- The MIDI timecode extension now allows the user to configure the maximum
+  delay allowed between consecutive timecode messages before the MIDI clock is
+  considered to have stopped. Raise the timeout if you are getting false
+  positives in the log about the clock being stopped and then re-started a
+  split second later. Lower the timeout for better responsiveness to stopping
+  the MIDI clock on the timecode generator at the expense of larger probability
+  for false positives.
+
+### Changed
+
+- Pre-arm messages from MAVLink drones are not logged by default in the server
+  console any more. You can switch back to the old behaviour with the new
+  `log_prearm` configuration subkey of the `statustext_messages` key of
+  MAVLink network configuration objects. The reason for this change is that
+  pre-arm messages can be retrieved by other means (e.g., by double-clicking
+  on any drone in Skybrush Live that shows a `PREARM` error code), and pre-arm
+  messages related to the polygon geofence may flood the logs when thousands of
+  drones are turned at the same time in a location that is outside the _previous_
+  geofence location.
+
+- When logging transmission errors for communication channels, we now keep track
+  of the number of _consecutive_ failed attempts and suspend logging errors on
+  the channel when there were more than 5 failed attempts. This is to prevent
+  flooding the logs if the networks are down due to reconfiguration while the
+  server is running.
+
+- The default timeout for MIDI tiemcode messages is raised to 1 second from
+  200 milliseconds as larger delays might be expected (especially on Linux)
+  when the system is under heavy load.
+
+### Fixed
+
+- Improved robustness of the main server loop for cases when internal command
+  dispatch queues are filled up. This may typically happen when sending a
+  unicast command to thousands of drones at the same time from the Live UI as
+  the internal command dispatch queue has a size limit. (Note that you should
+  use broadcast commands from Live if you want to wake up seveeral drones or
+  send them to sleep mode).
+
+- MAVLink autopilot version number is now queried again after a firmware update
+  instead of returning the previously cached value.
+
+## [2.28.0] - 2025-06-07
+
+### Added
+
+- MAVLink drones now support pyro channel tests.
+
+## [2.27.1] - 2025-06-03
+
+### Added
+
+- Added support for the `X-LPS-CFG` command that allows one to configure the
+  settings of a local positioning system.
+
+### Changed
+
+- Code related to generating RTH plans, yaw setpoints and pyro events in a
+  `skyb` show file is now moved to a separate pro extension.
+
+## [2.26.1] to [2.26.6] - 2025-05-27
+
+No user-facing changes.
+
+## [2.26.0] - 2025-04-28
+
+### Added
+
+- Over-the-air firmware updates are now supported on MAVLink drones running
+  ArduPilot if the bootloader of the drone is capable of flashing the new
+  firmware from an image file uploaded with MAVFTP. Currently not all flight
+  controllers support this; refer to the corresponding page on the
+  [ArduPilot documentation site](https://ardupilot.org/copter/docs/common-install-sdcard.html).
+
+### Changed
+
+- RTK correction packets are not sent on MAVLink networks when the server has
+  not seen a MAVLink heartbeat from at least one drone in that network. This
+  allows one to set up multiple MAVLink networks in the configuration file in
+  advance; the server will send RTK correction packets only to those networks
+  that are actually used.
+
+## [2.25.2] - 2025-04-17
+
+### Fixed
+
+- Virtual UAVs simulated from the `virtual_uavs` extension now have proper
+  horizontal velocity displays.
+
+- The MIDI timecode extension is now more resilient to the disconnection of the
+  MIDI timecode device. Disconnecting a device while the server is running will
+  stop the clock and restart it when the device is connected again.
+
+## [2.25.1] - 2025-03-24
+
+### Fixed
+
+- Sidekick and other extensions interested in fragmented MAVLink RTK correction
+  packets are now notified only once for each such packet instead of as many
+  times as the number of networks.
+
+## [2.25.0] - 2025-03-18
+
+### Added
+
+- RSSI values can now be derived for UAVs from the RTCM message counts reported
+  by newer versions of the Skybrush firmware (currently the development version
+  only). This allows one to track the status of both the primary and the
+  secondary telemetry channel. Live also needs to be updated to the development
+  version to support more than one RSSI measure per drone.
+
+- The `show` extension now exposes the metadata of the last uploaded show to
+  other extensions via its own API.
+
+### Changed
+
+- Increased the sizes of some internal command queues to allow sending unicast
+  commands to hundreds of drones one by one.
+
+### Fixed
+
+- When setting a parameter on MAVLink-based drones, the new value of the
+  parameter is now queried explicitly if no `PARAM_VALUE` response arrives in
+  time. This is necessary to modify parameters on ArduPilot-based drones using
+  telemetry channels where MAVLink routing is disabled.
+
+## [2.24.5] - 2025-02-22
+
+### Added
+
+- Added handler for `X-RTK-SAVE` that saves the current user-defined presets to
+  the configuration file holding the user-defined presets.
+
+- Added configuration option in the `rtk` extension to allow the user to
+  specify an alternative configuration file for the user-defined presets.
+
+## [2.24.4] - 2025-02-17
+
+### Fixed
+
+- Added missing command handlers for `UAV-CALIB` requests.
+
+## [2.24.3] - 2025-02-15
+
+### Added
+
+- Added hover mission item type (only used in waypoint missions, not shows)
+
+## [2.24.0] - 2025-02-13
+
+### Added
+
+- Added the concept of "show authorization scopes", to be used in later
+  versions to allow starting a show in rehearsal mode or with lights only (no
+  movement).
+
+### Fixed
+
+- A warning message is now printed when the limits imposed on the server by the
+  license manager are reached.
+
+- MAVLink signing timestamp synchronization now works across all networks
+  instead of having a separate timestamp per network. This seems to work better
+  in multi-network setups.
+
+## [2.23.7] - 2025-01-20
+
+### Fixed
+
+- Fixed automatic inference of broadcast port when drones are sending packets
+  from a UDP port number that is different from where they listen for broadcast
+  packets.
+
+## [2.23.0] - 2024-11-14
+
+### Changed
+
+- For extension authors: extensions binding to a TCP or UDP port to provide a
+  service should register the port using the `use_port()` context manager if
+  they wish to expose the port number to others. Registered ports will also be
+  made public via the `SYS-PORTS` message.
+
+## [2.22.0] - 2024-09-18
+
+### Added
+
+- MAVLink STATUSTEXT logging levels can now be configured separately for
+  server logs (printed in the console) and client logs (forwarded to connected
+  clients).
+
+### Changed
+
+- MAVLink STATUSTEXT messages with severity equal to INFO or DEBUG are not
+  logged on the server console any more to reduce clutter. You can use the new
+  MAVLink STATUSTEXT logging level configuration option to restore the old
+  behaviour.
+
+## [2.21.0] - 2024-09-07
+
+### Changed
+
+- MAVLink extension now uses _decimal_ numbers for system and component IDs
+  instead of hexadecimal. Using hexadecimal versions in earlier versions caused
+  confusion and made the log messages harder to interpret.
+
+### Fixed
+
+- "Server location changed to unknown" message displayed no longer as it was
+  confusing during shutdown.
+
+## [2.20.0] - 2024-09-03
+
+### Added
+
+- RTK correction message bandwidth is now tracked separately for inbound
+  messages (received from the RTK base) and outbound messages (forwarded to
+  UAVs and other components). You will need a recent version of Live to see
+  both on the Live UI; older versions of Live will keep on showing the inbound
+  bandwidth like before.
+
+- Added a new extension to provide approximate location information for the
+  server based on an arbitrary UAV in the UAV registry. Useful for seeding
+  RTK corrections from virtual reference stations automatically if at least one
+  UAV is seen by the server.
+
+### Changed
+
+- RTCM messages in the RTK module are now filtered by default such that only the
+  basic RTCMv3 message set required for RTK corrections are forwarded to the
+  UAVs. You can switch back to the full (unfiltered) message set in the settings
+  of the RTK extension.
+
+### Fixed
+
+- Fixed the parsing of horizontal and vertical position uncertainty values from
+  MAVLink `GPS_RAW_INT` messages. Earlier versions were overestimating the
+  uncertainty by a factor of 10. Thanks to Jake1999 for reporting the issue.
+
+## [2.19.1] - 2024-07-11
+
+### Added
+
+- Added support for parsing MSM5 and MSM6 RTK correction messages so you can
+  now see the carrier-to-noise ratio in the RTK dialog box of Skybrush Live if
+  your base station provides MSM5 or MSM6 messages.
+
+### Fixed
+
+- Fixed a bug in the decoder of chunked transfer encoding when using RTK
+  corrections from NTRIP servers.
+
+## [2.19.0] - 2024-07-08
+
+### Added
+
+- Low battery threshold in safety configuration can now be given as percentage
+  as well
+
+### Fixed
+
+- MAVLink pressure sensor calibration messages may now also return "in
+  progress" to consider them successful.
+
+- Fixed a bug in the formatting of NMEA GGA messages for remote RTK stations
+  that require the base station coordinates.
+
+- MAVLink signature timestamps are now synchronized between broadcast and
+  unicast streams of the same network.
+
+## [2.18.1] - 2024-04-05
+
+### Fixed
+
+- Fixed a bug in the MAVLink signing setup code that resulted in an incorrect
+  key when it is specified in bas64 representation instead of hex notation.
+
+## [2.18.0] - 2024-02-13
+
+### Added
+
+- Added flight area definition and flight mode change mission commands,
+  primarily for adaptive swarming missions
+
+- Added ground altitude reference for mission items and new payload action
+  types for camera based missions
+
+## [2.17.5] - 2024-01-16
+
+### Fixed
+
+- Added missing "ID offset" field to MAVLink extension configuration schema so
+  ID offsets can now be adjusted from the UI if you have multiple MAVLink
+  networks.
+
+- Fixed encoding bug in `.skyb` format when the takeoff time was non-zero.
+
+## [2.17.3] - 2023-12-16
+
+### Added
+
+- MAVLink drones now support yaw setpoints during a show, provided that the
+  onboard firmware supports yaw setpoints in the show data. This feature is
+  experimental and has only been tested in simulator yet. We will publish more
+  details about yaw control when the feature has been introduced fully through
+  the entire Skybrush software stack.
+
+### Fixed
+
+- Fixed a crash in the Crazyflie extension with newer versions of `anyio`.
+
+- Fixed a rare rounding error that caused an exception during show uploading
+  due to an overflow.
+
+## [2.17.2] - 2023-12-01
+
+### Added
+
+- The server can now be made aware of its own location with the `location`
+  extension, and the `rtk` extension will use the location when connecting to
+  an NTRIP server to send NMEA GGA messages periodically. This enables the use
+  of NTRIP VRS servers (Virtual Reference Stations) where a country-wide
+  network of base stations are used to provide RTK corrections at any arbitrary
+  coordinate within the coverage area of the network.
+
+### Fixed
+
+- Fixed issues with reloading extensions that depend on `http_server` and
+  provide their own blueprint.
+
+- Fixed a congestion bug during MAVLink log downloads by not requesting more
+  than 512 `LOG_DATA` chunks at a time.
+
+## [2.17.0] - 2023-10-29
+
+### Added
+
+- MAVLink `RADIO_STATUS` messages are now parsed if they originate from
+  a component that denotes a UDP-to-UART bridge. It is assumed that these
+  messages come from the `mavesp8266` firmware; the RSSI values in the message
+  are converted into percentages and stored on the server side. Live will be
+  updated soon to display the RSSI values.
+
+### Fixed
+
+- Fixed a bug with drones that are capable of entering a sleep state where the
+  autopilot type was not detected correctly after the drone was woken up.
+
+## [2.16.0] - 2023-10-25
+
+### Added
+
+- MAVLink networks now support sending and receiving MAVLink signed messages.
+  This feature is in an experimental stage yet and we appreciate any feedback
+  from users.
+
+## [2.15.0] - 2023-09-21
+
+### Added
+
+- The default accuracy and minimum duration of RTK surveys can now be configured
+  in the `rtk` extension.
+
+- MAVLink drones running a recent version of the Skybrush firmware (version
+  20230920 or later, or, if you are compiling the firmware directly from our
+  GitHub repo, then any version based on ArduCopter 4.3.7 or later) now report
+  when they deviate significantly from their planned trajectory during a show.
+
+- MAVLink drones report the takeoff and landing stages as informational messages
+  during the execution of a show.
+
+- Pro users can now load the `flight_report` extension, which can produce
+  tabular reports about the takeoff and landing times of the drones as well as
+  any error conditions, in various formats (HTML, CSV, JSON), for reporting
+  purposes.
+
+- RTK and RC override messages in the `mavlink` extension can now be routed to
+  multiple connections.
+
+- Broadcast messages from the `mavlink` extension can now be rate-limited to
+  work around with packet loss issues in connections that cannot cope with
+  bursty transmissions due to lack of flow control. This is a workaround that
+  should be enabled only if you are experiencing packet loss problems and you
+  suspect that it is due to lack of flow control.
+
+## [2.14.0] - 2023-06-16
+
+### Changed
+
+- Behind-the-scenes updates to the `lps` (local positioning system) module.
+
+### Fixed
+
+- Fixed a bug that prevented adjusting the epoch of the show clock while the
+  clock was running.
+
+## [2.13.0] - 2023-05-27
+
+### Added
+
+- When working with MAVLink networks, you can now specify an offset that is
+  added to the system ID before the final Skybrush ID of the drone is derived.
+  This can be used to achieve continuous numbering if you have multiple
+  networks with, say, 250 drones per network.
+
+### Fixed
+
+- Fixed a bug in the handling of NTRIP servers when the server responds with
+  chunked transfer encoding.
+
+- When reloading the `offline_maps` extension, the app now simply asks the user
+  to restart the entire application instead of printing a cryptic error message
+  to the console.
+
+### Deprecated
+
+- The top-level `connections` key of the MAVLink extension configuration object
+  is deprecated. Define a MAVLink network first under the `networks` key with
+  a unique ID and move the `connections` key there when migrating old config
+  files.
+
+## [2.12.2] - 2023-04-24
+
+### Added
+
+- Virtual UAVs now support (virtual) motor and LED tests.
+
+### Fixed
+
+- Fixed a bug in the handling of NTRIP server responses when the server
+  responds with an HTTP/1.1 response line and not ICY.
+
+## [2.12.1] - 2023-04-20
+
+### Added
+
+- Added support for a new clock that shows the time left until the end of the
+  current show if the show duration is submitted by the client when it
+  configures the start time of the show.
+
+## [2.12.0] - 2023-04-11
+
+### Added
+
+- We now distinguish between altitude above _ground level_ (AGL) and altitude
+  above _home level_ (AHL) in the server and also in Skybrush Live. Earlier
+  versions used to call altitude above home level as AGL, this is now fixed and
+  you should be looking for AHL instead of AGL if you want this information.
+  AGL info will be provided only if terrain following is configured on the
+  drone and it knows its own altitude above ground level.
+
+- GPS horizontal and vertical accuracy data is now parsed from MAVLink messages
+  and shown in Skybrush Live.
+
+- Compass calibration now shows progress percentage in clients for MAVLink
+  based drones. You might need to update Skybrush Live to see the progress bar.
+
+- Added support for accelerometer calibration for MAVLink-based drones.
+
+## [2.11.0] - 2023-04-05
+
+### Added
+
+- The Crazyflie extension can now be configured to select a specific controller
+  type on the drones after a show upload.
+
+## [2.10.2] - 2023-03-24
+
+### Fixed
+
+- When setting the clock of the server running on Linux during a connection from
+  a Skybrush Live client, the new date and time is now also written back to the
+  hardware clock of the server if it has one.
+
+## [2.10.0] - 2023-02-14
+
+### Added
+
+- MAVLink-based drones are now marked as being in "sleep mode" if the heartbeat
+  indicates that the flight controller is not running. You will not see this
+  with the stock ArduPilot firmware, but if you use our own `mavesp8266` fork
+  in your wifi module, you can configure the `mavesp8266` to be able to control
+  power to the flight controller and it will generate heartbeats _on behalf of_
+  the flight controller if the flight controller itself is powered down. This
+  allows you to make full use of the "sleep" and "resume" buttons on the
+  Skybrush Live UI with MAVLink-based drones, provided that you use our
+  `mavesp8266` fork or implement similar functionality in the firmware of your
+  wifi-to-serial bridge.
+
+### Fixed
+
+- Fixed MAVFTP uploads when the target path starts with `@`.
+
+## [2.9.0] - 2023-01-18
+
+### Added
+
+- RTK presets can now be designated as auto-selectable; the first such preset
+  will be used automatically when the server starts.
+
+- The RTK extension now exposes methods that allow other extensions to retrieve
+  the status of RTK corrections being received from the base station.
+
+- MAVLink drones will now receive `RC_CHANNELS_OVERRIDE` messages when the
+  server receives RC channel change events from a simulated RC via UDP packets.
+  You need to enable the `rc_udp` extension to use this feature.
+
+- RC simulation with UDP packets in the `rc_udp` extension now has a configurable
+  timeout after which the RC connection is assumed to be lost.
+
+## [2.7.1] - 2022-12-25
+
+### Added
+
+- The server is now aware of `systemd` on Linux systems and can be started as
+  a `systemd` service with `Type=notify`.
+
+### Fixed
+
+- Fixed a bug in the "Save" button of the web UI that derives a minimal
+  configuration file containing all the differences from the server defaults.
+
+## [2.7.0] - 2022-12-19
+
+### Added
+
+- Added mission commands to supplement mission item parsing in industrial
+  projects
+
+### Fixed
+
+- Fixed frame rate limit parsing in the `mocap` extension/
+
+- Fixed mass parameter upload for Crazyflie drones
+
+- Fixed geofence action descriptions
+
+## [2.6.0] - 2022-11-20
+
+### Added
+
+- Added basic model classes for generic mission handling
+
+## [2.5.1] - 2022-11-01
+
+### Changed
+
+- Crazyflie takeoff altitude is now configurable from the extension.
+
+- Virtual UAV battery discharge time adjusted so we can simulate longer shows.
+
+### Fixed
+
+- Fixed display of Crazyflie yaw angles.
+
+## [2.5.0] - 2022-09-14
+
+### Added
+
+- The base port number of the server can now be overridden by the `-p` command
+  line switch, the `PORT` environment variable and the `PORT` configuration
+  key, in this order of precedence (`-p` being the highest priority).
+
+- Added a `motion_capture` extension that can be used as a base to add support
+  for external motion capture systems for indoor drones.
+
+- MAVLink extension now generates a CRC32 checksum into the uploaded `.skyb`
+  files so the drones have one additional tool at their disposal to check the
+  integrity of the uploaded file.
+
+## [2.4.0] - 2022-06-26
+
+### Added
+
+- Shows can now be started automatically based on any arbitrary registered
+  clock in the server. The primary use-case is to start a show based on an
+  external MIDI timecode.
+
+### Fixed
+
+- Fixed automatic scanning for Crazyflie drones when multiple Crazyradios are
+  connected; earlier versions did not preserve the assignment between radios
+  and the discovered drones, resulting in warnings printed to the console.
+
+- `show remove` and `show clear` commands are now accepted both by Crazyflie
+  and MAVLink drones for sake of consistency.
+
+## [2.3.0] - 2022-06-09
+
+### Added
+
+- Added an extension module that allows the server to cache map tiles
+  downloaded by Skybrush Live so they can be used even when the computer
+  running Live (and the server) is offline. Requires a license for Skybrush
+  Live Pro.
+
+### Changed
+
+- On ArduPilot drones, the `FENCE_TYPE` parameter is now adjusted automatically
+  when a geofence is uploaded. Earlier versions did not touch the `FENCE_TYPE`
+  parameter even if the geofence configuration request contained limits for
+  fence types that were not enabled before in the `FENCE_TYPE` bitmask.
+
+### Fixed
+
+- The RTK and the GPS extensions do not crash any more when trying to register a
+  new beacon and the object registry is full (typically when the license limits
+  are hit).
+
+- Fixed the decoding of the git commit hash in ArduPilot version numbers.
+
+## [2.2.0] - 2022-05-27
+
+### Added
+
+- Show specifications may now contain a preferred geofence action.
+
+- ArduPilot-based drones can now configure the geofence action on the drone
+  based on the action submitted in the show specification.
+
+## [2.1.0] - 2022-05-19
+
+### Added
+
+- Added basic support for remote wakeup and shutdown of UAVs if the UAV driver
+  supports it.
+
+- Added experimental wakeup / shutdown support for MAVLink drones with a custom
+  MAVLink message extension.
+
+### Fixed
+
+- Fixed a deadlock in the extension manager when the licensing extension
+  initiated a forced shutdown due to an expired license.
+
+## [2.0.0] - 2022-04-29
+
+### Changed
+
+- The source code of the server is now licensed under the GNU General Public
+  License, version 3 or later.
+
+### Fixed
+
+- License module now prints the maximum number of drones if there is such a
+  restriction in the license.
+
+## [1.28.3] - 2022-04-10
+
+### Changed
+
+- Geofence errors are now turned into warnings for MAVLink-drones if we know
+  that the drone is on the ground.
+
+### Fixed
+
+- Fixed binding of Skybrush Server to SSDP sockets on Windows.
+
+## [1.28.2] - 2022-03-24
+
+### Fixed
+
+- Fixed a bug in the logging of start events for indoor shows
+
+- macOS and Linux launcher scripts now look for the configuration file in the
+  default installation folder if no configuration file is given explicitly.
+
+## [1.28.0] - 2022-02-23
+
+### Added
+
+- The server configuration can now be exported from the web UI in JSON format.
+
+- When the server is configured from a configuration file, the web UI now allows
+  the user to save the current configuration to the configuration file.
+
+- Basic user authentication can now be set up from the web UI.
+
+- Server logs are now saved in a dedicated logging folder; logs are rotated
+  at regular intervals.
+
+- Extensions can now be reloaded from the web UI even if other extensions
+  depend on them; the dependencies will be unloaded before the extension is
+  reloaded and they will be restored afterwards.
+
+- For uBlox RTK base stations, the server now requests the base station to send
+  UTC timestamps at regular intervals and warn connected clients if the server
+  clock is not synchronized to the clock of the RTK base station.
+
+### Fixed
+
+- Motor test on MAVLink-based drones now supports more than four rotors.
+
+## [1.27.2] - 2022-01-03
+
+### Fixed
+
+- Fixed a bug in the RTK base station handling that sometimes resulted in an
+  unhandled error message when the RTK base station was not sending valid
+  messages at all.
+
+- Fixed a bug that prevented the magnetic vector provider from working properly
+  in macOS builds.
+
+## [1.27.0] - 2021-12-29
+
+### Added
+
+- Added support for beacons. Extensions may now register beacon objects in the
+  server; beacons are shown on the map in clients that support them (e.g.,
+  Skybrush Live from version 1.25.0).
+
+- RTK extension now registers the position of the base station as a beacon.
+
+- The Light control panel in Skybrush Live is now also supported for Crazyflie
+  drones.
+
+- Added a module that provides the magnetic vector for a given GPS coordinate;
+  this can be used by clients to calculate the magnetic declination to show it
+  on the user interface.
+
+## [1.26.0] - 2021-12-06
+
+### Added
+
+- Added support for Socket.IO protocol v5 as the transport layer between
+  Skybrush Live and Skybrush Server. Support for Socket.IO v4 is still kept
+  until older versions of Skybrush Live that rely on Socket.IO v4 are phased
+  out.
+
+### Fixed
+
+- Serial ports connected to common autopilots and bootloaders do not get detected
+  as RTK base station candidates any more.
+
+- In Linux and macOS, the `skybrushd` startup script now resolves relative
+  configuration file names from the current directory, as expected.
+
+## [1.25.0] - 2021-11-02
+
+### Added
+
+- The server can now retrieve the current value of the planetary K-index from
+  various data sources. Future versions of Skybrush Live will make use of this
+  facility to show the Kp-index on the user interface.
+
+### Fixed
+
+- Fixed a trajectory encoding bug for Crazyflie drones when a segment of
+  a trajectory was described with a 7-degree polynomial.
+
+## [1.24.2] - 2021-09-03
+
+### Fixed
+
+- The `go` command for Crazyflie drones now plans a trajectory that is always
+  at least 1 second long.
+
+## [1.24.0] - 2021-08-21
+
+### Added
+
+- Safety fence distance and safety action for Crazyflies is now configurable in
+  the server settings.
+
+- RTK base stations can now be configured to a fixed coordinate in ECEF (Earth
+  centered Earth fixed).
+
+### Fixed
+
+- Fixed a bug with the initialization sequence after re-connection to
+  a Crazyflie drone after a temporary loss of connection (e.g., a reboot)
+
+## [1.23.0] - 2021-08-13
+
+### Added
+
+- Safety fence is now automatically set up for Crazyflie drones with a 1m
+  safety distance from the axis-aligned bounding box of the trajectory.
+
+### Fixed
+
+- Fixed spurious log messages when a Crazyflie radio is unplugged from the USB
+  port while the server is running.
+
+## [1.22.0] - 2021-08-09
+
+### Added
+
+- The interval between consecutive status information messages can now be
+  configured in the Crazyflie extension, allowing you to track the Crazyflie
+  more precisely from the server if needed.
+
+## [1.21.2] - 2021-08-06
+
+### Added
+
+- The OSC extension now sends whether a given drone has been seen recently by
+  the server or not, allowing one to ignore drones that have probably been
+  turned off.
+
+## [1.21.1] - 2021-07-20
+
+### Fixed
+
+- macOS executable is now signed using an ad-hoc signature to allow execution
+  on Apple Silicon. Note that Apple Silicon is not supported officially yet;
+  this is the first step towards full native support.
+
+## [1.21.0] - 2021-07-19
+
+### Added
+
+- The server now provides an optional OSC extension that allows one to forward
+  the (geodetic or local) positions of the drones to an OSC server for further
+  processing.
+
+## [1.20.0] - 2021-07-14
+
+### Added
+
+- Crazyflie drones can now be armed or disarmed from the server with the
+  standard arming commands.
+
+### Fixed
+
+- Restored compatibility with Python 3.7.
+
+## [1.19.0] - 2021-07-12
+
+### Added
+
+- The server now attempts to re-connect to an RTK base station if the base
+  station disappeared briefly for at most 30 seconds while it was being used.
+  This helps to recover automatically in cases when the RTK base station was
+  plugged into an unpowered USB hub and the device disappeared briefly from the
+  OS due to power issues on the USB port.
+
+- The RTK extension of the server can now be configured to send RTK corrections
+  only for a subset of all supported GNSS types; for instance, one can now
+  configure the extension to send corrections for GPS and GLONASS only, saving
+  bandwidth in geographical areas where BeiDou is not relevant.
+
+### Changed
+
+- The server now requires an RTK base station to broadcast its own antenna
+  position at least once every 30 seconds, otherwise the last antenna position
+  will be invalidated.
+
+## [1.18.0] - 2021-05-10
+
+This is the release that serves as a basis for changelog entries above. Refer
+to the commit logs for changes affecting this version and earlier versions.

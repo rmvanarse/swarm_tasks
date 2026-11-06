@@ -1,0 +1,57 @@
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+import PropTypes from 'prop-types';
+
+import AsyncGuard from '~/components/AsyncGuard';
+import { selectableListOf } from '~/components/helpers/lists';
+
+const MissionTypeListEntry = ({ name, description, onItemSelected }) => (
+  <ListItemButton onClick={onItemSelected}>
+    <ListItemText primary={name} secondary={description} />
+  </ListItemButton>
+);
+
+MissionTypeListEntry.propTypes = {
+  name: PropTypes.string,
+  description: PropTypes.string,
+  onItemSelected: PropTypes.func,
+};
+
+const MissionTypeSelectorPresentation = selectableListOf(
+  (missionType, props) => (
+    <MissionTypeListEntry key={missionType.id} {...missionType} {...props} />
+  ),
+  {
+    dataProvider: 'items',
+    displayName: 'MissionTypeSelectorPresentation',
+    backgroundHint: 'No mission types',
+  }
+);
+
+const MissionTypeSelector = ({ getTypes, style, ...rest }) => {
+  return (
+    <AsyncGuard
+      func={getTypes}
+      errorMessage='Error while loading mission types from server'
+      loadingMessage='Retrieving mission types...'
+      style={style}
+    >
+      {(items) => (
+        <MissionTypeSelectorPresentation
+          items={items}
+          style={style}
+          {...rest}
+        />
+      )}
+    </AsyncGuard>
+  );
+};
+
+MissionTypeSelector.propTypes = {
+  getTypes: PropTypes.func,
+  onChange: PropTypes.func,
+  style: PropTypes.object,
+  value: PropTypes.any,
+};
+
+export default MissionTypeSelector;

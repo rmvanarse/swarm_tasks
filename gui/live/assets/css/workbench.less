@@ -1,0 +1,125 @@
+/* Styling for the global workbench component, currently implemented
+ * using golden-layout */
+
+@import '~golden-layout/src/css/goldenlayout-base.css';
+@import '~golden-layout/src/css/goldenlayout-light-theme.css';
+@import '~react-flexible-workbench/themes/dark.css';
+
+/* Make the panels scrollable */
+body .lm_content {
+  overflow-y: auto;
+  background-color: white;
+}
+
+/* Fix the background color of the panel bodies and the tabs */
+body .lm_header {
+  .lm_tab {
+    background-color: #ddd;
+    &.lm_active {
+      background-color: white;
+    }
+  }
+}
+
+/* Prevent selection in the panel titles */
+.lm_title {
+  user-select: none;
+}
+
+/* Settings button */
+.lm_controls .lm_settings {
+  background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAJCAYAAADgkQYQAAAAFUlEQVQY02NgGJzgPxTjZDMNQkcDAOi4Bf2rdMdGAAAAAElFTkSuQmCC);
+}
+
+/* Icon styling in workbench-related components */
+.wb-icon {
+  display: inline-block;
+  position: relative;
+  vertical-align: middle;
+  width: 48px;
+  height: 48px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+.wb-module {
+  padding: 0 !important;
+  white-space: nowrap;
+}
+.wb-module .wb-module-label {
+  margin-right: 15px;
+  white-space: nowrap;
+}
+
+/* Horizontal separators in sidebar */
+#sidebar hr {
+  width: 100%;
+  height: 1px;
+  margin: 0.25em 0;
+  border: none;
+  background: #424242;
+  box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.65);
+}
+
+/* Vertical separators in header */
+#header-inner > hr {
+  align-self: stretch;
+  width: 1px;
+  margin: 0 0.25em;
+  border: none;
+  background: #424242;
+  box-shadow: -1px 0 4px rgba(0, 0, 0, 0.65);
+}
+
+.wb-modification-indicator {
+  font-size: 10px;
+  text-align: center;
+
+  user-select: none;
+}
+
+/* Perspective switching in header */
+.wb-perspective-bar {
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.25) 80%,
+    rgba(0, 0, 0, 0.4) 100%
+  );
+  flex: 1;
+  justify-content: left;
+  border-right: 1px solid #424242;
+  border-bottom: 1px solid #424242;
+  overflow-x: auto;
+}
+.wb-perspective-bar-item {
+  margin: 0 !important;
+}
+.wb-perspective-bar button {
+  display: none;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  font-size: 14px !important; /* consistent with sidebar */
+  height: 100%;
+  background: unset;
+  box-shadow: unset;
+  padding: 7px 8px 4px 8px; /* padding higher at the top to compensate for border at bottom */
+}
+.wb-perspective-bar .wb-perspective-selected button {
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  border-bottom: 3px solid #03a9f4; /* Material UI lightBlue[500] */
+}
+.wb-perspective-bar button:hover {
+  /* styling same as for GenericHeaderButton */
+  background: linear-gradient(to bottom, #06c 0%, #25a 100%);
+  border-bottom: 3px solid #03a9f4; /* Material UI lightBlue[500] */
+}
+
+/* Disable draggable splitters for fixed layouts */
+.workbench-fixed .lm_splitter,
+.workbench-fixed .lm_tab {
+  pointer-events: none;
+}

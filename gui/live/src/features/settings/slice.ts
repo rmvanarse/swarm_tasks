@@ -1,0 +1,141 @@
+/**
+ * @file Slice of the state object that handles the the application-specific
+ * settings of the user.
+ */
+
+import config from 'config';
+
+import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
+
+import { ThemeType } from '@skybrush/app-theme-mui';
+
+import {
+  DEFAULT_BATTERY_CELL_COUNT,
+  LIPO_CRITICAL_VOLTAGE_THRESHOLD,
+  LIPO_FULL_CHARGE_VOLTAGE,
+  LIPO_LOW_VOLTAGE_THRESHOLD,
+} from '~/model/constants';
+import {
+  AltitudeSummaryType,
+  BatteryDisplayStyle,
+  CoordinateFormat,
+  UAVOperationConfirmationStyle,
+} from '~/model/settings';
+import { UAVSortKey } from '~/model/sorting';
+import { isRunningOnTouch } from '~/utils/platform';
+import { noPayload } from '~/utils/redux';
+
+import { type SettingsState, UAVListLayout } from './types';
+
+type SettingsSliceState = SettingsState;
+
+const initialState: SettingsSliceState = {
+  display: {
+    altitudeSummaryType: AltitudeSummaryType.AMSL,
+    coordinateFormat: CoordinateFormat.SIGNED_DEGREES,
+    experimentalFeaturesEnabled: false,
+    hideEmptyMissionSlots: false,
+    language: 'en',
+    optimizeForSingleUAV: config.optimizeForSingleUAV.default,
+    optimizeUIForTouch: config.optimizeUIForTouch.default ?? isRunningOnTouch,
+    showMouseCoordinates: true,
+    showScaleLine: true,
+    theme: ThemeType.AUTO,
+    hideInactiveSegmentsOnDarkLCD: false,
+    uavListFilters: [
+      /* Each item in this array is currently a string from the UAVFilter
+       * enum */
+    ],
+    uavListLayout: UAVListLayout.GRID,
+    uavListSortPreference: {
+      key: UAVSortKey.UAV_ID,
+      reverse: false,
+    },
+  },
+
+  localServer: {
+    cliArguments: '',
+    enabled: false,
+    searchPath: [],
+  },
+
+  uavs: {
+    autoRemove: false,
+    warnThreshold: 3,
+    goneThreshold: 60,
+    forgetThreshold: 600,
+    placementAccuracy: 1000,
+    altitudeWarningThreshold: 3000,
+    takeoffHeadingAccuracy: 20,
+    defaultBatteryCellCount: DEFAULT_BATTERY_CELL_COUNT,
+    fullChargeVoltage: LIPO_FULL_CHARGE_VOLTAGE,
+    lowVoltageThreshold: LIPO_LOW_VOLTAGE_THRESHOLD,
+    criticalVoltageThreshold: LIPO_CRITICAL_VOLTAGE_THRESHOLD,
+    preferredBatteryDisplayStyle: BatteryDisplayStyle.VOLTAGE,
+    uavOperationConfirmationStyle: UAVOperationConfirmationStyle.NEVER,
+    maxUploadConcurrency: 8,
+    minIndoorTakeoffSpacing: 200,
+    minOutdoorTakeoffSpacing: 400,
+  },
+
+  apiKeys: {},
+};
+
+const { actions, reducer } = createSlice({
+  name: 'settings',
+  initialState,
+  reducers: {
+    replaceAppSettings: {
+      prepare: <Category extends keyof SettingsSliceState>(
+        category: Category,
+        updates: SettingsSliceState[Category]
+      ) => ({
+        payload: { category, updates },
+      }),
+
+      reducer<Category extends keyof SettingsSliceState>(
+        state: Draft<SettingsSliceState>,
+        action: PayloadAction<{
+          category: Category;
+          updates: SettingsState[Category];
+        }>
+      ) {
+        const { category, updates } = action.payload;
+
+        if (state[category] !== undefined) {
+          state[category] = updates;
+        }
+      },
+    },
+
+    updateAppSettings: {
+      prepare: <Category extends keyof SettingsSliceState>(
+        category: Category,
+        updates: Partial<SettingsSliceState[Category]>
+      ) => ({
+        payload: { category, updates },
+      }),
+
+      reducer<Category extends keyof SettingsSliceState>(
+        state: Draft<SettingsSliceState>,
+        action: PayloadAction<{
+          category: Category;
+          updates: Partial<SettingsState[Category]>;
+        }>
+      ) {
+        const { category, updates } = action.payload;
+
+        if (state[category] !== undefined) {
+          state[category] = { ...state[category], ...updates };
+        }
+      },
+    },
+  },
+});
+
+export const {
+  replaceAppSettings,
+  updateAppSettings,
+} = actions;
+
+export default reducer;

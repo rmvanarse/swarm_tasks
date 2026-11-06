@@ -1,0 +1,34 @@
+from collections.abc import Awaitable, Callable
+from time import time
+
+from flockwave.gps.vectors import GPSCoordinate
+from flockwave.spec.schema import get_complex_object_schema
+
+from flockwave.server.model.metamagic import ModelMeta
+
+__all__ = ("Weather", "WeatherProvider")
+
+
+class Weather(metaclass=ModelMeta):
+    """Class representing all that the server knows about the weather at a given
+    geographical location and time.
+    """
+
+    class __meta__:
+        schema = get_complex_object_schema("weather")
+
+    def __init__(
+        self, position: GPSCoordinate | None = None, timestamp: int | None = None
+    ):
+        self.position = position
+        self.timestamp = timestamp if timestamp is not None else time()
+
+
+SyncWeatherProvider = Callable[[Weather, GPSCoordinate], None]
+"""Type specification for synchronous weather provider functions."""
+
+AsyncWeatherProvider = Callable[[Weather, GPSCoordinate], Awaitable[None]]
+"""Type specification for asynchronous weather provider functions."""
+
+WeatherProvider = Callable[[Weather, GPSCoordinate | None], None | Awaitable[None]]
+"""Type specification for weather provider functions."""

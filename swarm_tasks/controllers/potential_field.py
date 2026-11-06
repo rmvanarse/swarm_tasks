@@ -1,9 +1,6 @@
-import swarm_tasks.utils as utils
 import swarm_tasks.controllers.command as cmd
-#import swarm_tasks.simulation as sim
-
 import numpy as np
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point
 from shapely.ops import nearest_points
 
 

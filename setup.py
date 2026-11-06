@@ -11,5 +11,18 @@ setup(
 	author_email='rishikesh.vanarse@gmail.com',
 	license='MIT',
 	packages=['swarm_tasks'],
+	install_requires=[
+		'numpy',
+		'scipy',
+		'shapely',
+		'pandas',
+		'matplotlib',
+		'PyYAML',
+		'geopy',
+		'simplekml',
+		'netifaces',
+		'dronekit',
+		'pymavlink',
+	],
 	zip_safe=False
 	)

@@ -1,0 +1,482 @@
+@primary-color: #2196f3; // equal to primary[500] in the Material UI theme
+@button-offset: 20px;
+@short-transition-duration: 0.2s;
+@medium-transition-duration: 0.5s;
+@long-transition-duration: 1s;
+
+@box-background-color-light: #ffffff;
+@box-foreground-color-light: rgba(0, 0, 0, 0.87);
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  font-family: 'Fira Sans', Arial, sans-serif;
+  padding: 0px;
+  margin: 0px;
+
+  overflow: hidden;
+}
+
+/* Replace default monospaced font */
+pre,
+code {
+  font-family:
+    'Proggy Vector', 'Menlo', 'Consolas', 'DejaVu Sans Mono', 'Courier New',
+    'Courier', monospace;
+}
+
+/* Autocomplete highlights */
+mark {
+  background-color: yellow;
+  color: black;
+}
+
+/* Vertical centering */
+.vertical-center-func(@position: relative) {
+  position: @position;
+  top: 50%;
+  -webkit-transform: perspective(1px) translateY(-50%);
+  -ms-transform: perspective(1px) translateY(-50%);
+  transform: perspective(1px) translateY(-50%);
+}
+.vertical-center {
+  .vertical-center-func();
+}
+
+/* Horizontal centering */
+.horizontal-center {
+  text-align: center;
+}
+
+/* Full (vertical + horizontal) centering */
+.full-center {
+  .vertical-center-func();
+  text-align: center;
+}
+
+/* Mixin for styling boxes with drop shadows */
+.drop-shadow-box() {
+  background-color: @box-background-color-light;
+  color: @box-foreground-color-light;
+  padding: 0 !important;
+  border-radius: 2px !important;
+  box-shadow:
+    rgba(0, 0, 0, 0.117647) 0px 1px 6px,
+    rgba(0, 0, 0, 0.117647) 0px 1px 4px;
+}
+
+/* Shadow settings for bottom bars commonly used on same panels */
+.bottom-bar {
+  box-shadow: rgba(0, 0, 0, 0.3) 0 -10px 10px -10px;
+  z-index: 10;
+}
+
+/* Drag proxy for the workbench */
+.drag-proxy {
+  height: 100%;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 0) 10px,
+    rgba(0, 0, 0, 0.15) 10px,
+    rgba(0, 0, 0, 0.15) 20px
+  );
+}
+
+/* Hide unneeded focus ring on components where it appears */
+.no-focus-ring {
+  outline: none !important;
+}
+
+/* Root container for React */
+#root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Main workbench area of the root container */
+#workbench {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* Footer in which the lower buttons are placed */
+#footer {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  padding: @button-offset;
+}
+
+/* Map in the background of the main screen */
+#map {
+  width: 100%;
+  height: 100%;
+}
+
+/* Special styling for Material-UI lists that are placed within a
+ * Dialog and whose left edge lines up with the left edge of the dialog. */
+.dialog-sidebar {
+  padding: 0 !important;
+  min-width: 240px;
+}
+
+/* Styling for selected list items in Material-UI */
+.selected-list-item {
+  color: @primary-color;
+  box-shadow: 5px 0px @primary-color inset;
+}
+
+/* Autosuggestion lists */
+.react-autosuggest__suggestions-list {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+/* Error panels */
+.error-panel {
+  background: #f4f4f4;
+  box-sizing: border-box;
+  display: flex;
+  flex-flow: column nowrap;
+  font-size: 14px;
+  height: 100%;
+  justify-content: center;
+  left: 0;
+  top: 0;
+  opacity: 0.5;
+  padding: 0 24px;
+  position: absolute;
+  text-align: center;
+  width: 100%;
+
+  .error-icon {
+    padding-bottom: 12px;
+  }
+
+  .button-bar {
+    padding-top: 24px;
+
+    button {
+      padding: 6px;
+      margin: 0 12px;
+    }
+  }
+}
+
+/* Widgets placed over the map */
+.widget {
+  position: absolute !important;
+  min-width: 48px;
+  min-height: 48px;
+  /* Title of widget */
+  .title {
+    font-size: 10pt;
+    font-weight: bold;
+    text-transform: uppercase;
+    line-height: 24px;
+    height: 24px;
+  }
+  /* Action bar of the widget (overlaid on top of it) */
+  .widget-action-bar {
+    position: absolute;
+    right: 0px;
+    top: 0px;
+    transition: opacity @short-transition-duration;
+    opacity: 0;
+  }
+  &:hover .widget-action-bar {
+    opacity: 1;
+  }
+}
+
+/* Add OpenLayers styling to the main map view. These selectors need to be more
+ * specific than the ones in ol.css because ol.css is lazy-loaded when the
+ * map is mounted, and we don't want it to override any of our styles */
+#main-map-view,
+#adapt-map-view {
+  /* Styling for OpenLayers controls */
+  .ol-control {
+    .drop-shadow-box();
+
+    button {
+      background-color: @box-background-color-light;
+      color: @box-foreground-color-light;
+      margin: 0px; /* to fit the Material design better */
+      width: 24px; /* 24px because Material buttons are 48px */
+      height: 24px;
+
+      &:hover,
+      &:focus {
+        background-color: @box-background-color-light;
+        color: @box-foreground-color-light;
+      }
+    }
+
+    &.ol-full-screen {
+      right: auto;
+      top: 8px + 48px + 8px;
+      left: 8px;
+    }
+
+    &.ol-overviewmap {
+      bottom: 4em;
+    }
+
+    &.ol-rotate {
+      top: 4em;
+      right: auto;
+      left: 2.5em;
+    }
+
+    &.ol-zoom {
+      top: 8px;
+      left: 8px;
+    }
+
+    &.ol-zoomslider {
+      top: 4em;
+    }
+
+    &.ol-zoom-extent {
+      top: 4em;
+    }
+  }
+
+  /* OpenLayers scale line should have a half-transparent "box styling" */
+  .ol-scale-line {
+    .drop-shadow-box();
+    bottom: 8px;
+    left: 8px;
+  }
+  .ol-scale-line-inner {
+    border-color: @box-foreground-color-light;
+    color: @box-foreground-color-light;
+  }
+
+  .ol-viewport {
+    .tool-select & {
+      .key-control &,
+      .key-meta & {
+        /* Path should be relative to LESS file otherwise it won't work in Electron */
+        cursor:
+          url('../cursors/select-area.png') 4 4,
+          auto;
+      }
+
+      .key-shift & {
+        cursor:
+          url('../cursors/add-area.png') 4 4,
+          auto;
+      }
+
+      .key-alt & {
+        cursor:
+          url('../cursors/remove-area.png') 4 4,
+          auto;
+      }
+    }
+
+    .tool-zoom & {
+      cursor:
+        url('../cursors/zoom-in.png') 9 9,
+        auto;
+
+      .key-shift & {
+        cursor:
+          url('../cursors/zoom-out.png') 9 9,
+          auto;
+      }
+    }
+
+    .tool-pan & {
+      cursor:
+        url('../cursors/pan.png') 12 12,
+        auto;
+
+      // &:active {
+      //   cursor: url('../cursors/open-with.png'), auto;
+      // }
+
+      .key-control &,
+      .key-meta & {
+        cursor:
+          url('../cursors/select-area.png') 4 4,
+          auto;
+      }
+
+      .key-shift & {
+        cursor:
+          url('../cursors/zoom-in.png') 9 9,
+          auto;
+      }
+
+      .key-shift.key-alt & {
+        cursor:
+          url('../cursors/rotate.png') 12 12,
+          auto;
+      }
+    }
+  }
+
+  .ol-dragbox,
+  .ol-dragzoom {
+    background-color: rgba(0, 136, 255, 0.25);
+    border: 1px solid #08f;
+  }
+
+  /* OpenLayers attribution widget should be in the lower right corner
+  * by default */
+  .ol-attribution {
+    .drop-shadow-box();
+
+    left: 8px;
+    bottom: 32px;
+    right: unset;
+
+    ul {
+      color: rgba(0, 0, 0, 0.54);
+
+      a,
+      a:hover,
+      a:active,
+      a:visited {
+        color: @box-foreground-color-light;
+        text-decoration: none;
+        text-shadow: none;
+      }
+    }
+  }
+  .ol-attribution.ol-uncollapsible {
+    border: 0 !important;
+    border-radius: 0 !important;
+    left: 0px;
+    bottom: 0px;
+    right: 0px;
+    max-width: unset;
+  }
+
+  .ol-mouse-position {
+    .drop-shadow-box();
+
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+
+    padding: 10px !important;
+
+    min-width: 175px;
+    text-align: right;
+
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Styling for the heatmap scale */
+#heatmapScale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  position: absolute;
+  left: 8px;
+  bottom: 8px + 14px + 8px;
+
+  width: 28px;
+  height: 200px;
+
+  span {
+    background-color: rgba(200, 200, 200, 0.75);
+
+    position: relative;
+    left: 40px;
+
+    margin-right: auto;
+    padding: 2px;
+
+    white-space: nowrap;
+
+    border-top-right-radius: 3px;
+    border-bottom-right-radius: 3px;
+  }
+
+  span:after {
+    display: block;
+
+    content: '';
+
+    position: absolute;
+    left: -12px;
+    top: 0px;
+
+    border-style: solid;
+    border-width: 12px 12px 12px 0;
+    border-color: transparent rgba(200, 200, 200, 0.75);
+  }
+}
+
+/* Styling for popup color pickers */
+.popup-color-picker {
+  display: inline-block;
+  vertical-align: middle;
+
+  .popup-color-picker-button {
+    min-height: 3ex;
+    width: 3em;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+  }
+
+  .popup-color-picker-dropdown {
+    .drop-shadow-box();
+  }
+}
+
+/* Styling for the UAV count monitor */
+.coloredContainer {
+  span {
+    opacity: 0;
+    letter-spacing: -10px;
+    transition:
+      letter-spacing @medium-transition-duration,
+      opacity @short-transition-duration;
+  }
+}
+
+.coloredContainer:hover {
+  span {
+    opacity: 1;
+    letter-spacing: normal;
+  }
+}
+
+/* Color picker customization */
+.swatches-picker.borderless > div > div:first-child {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Markdown editor customization for the "Field notes" panel */
+.EasyMDEContainer {
+  height: 100%;
+
+  & .CodeMirror {
+    height: 100% !important;
+    border: none !important;
+    padding: 4px !important;
+
+    & .CodeMirror-scroll {
+      min-height: unset !important;
+    }
+
+    & .cm-link {
+      color: #4fadf8 !important;
+    }
+  }
+}
