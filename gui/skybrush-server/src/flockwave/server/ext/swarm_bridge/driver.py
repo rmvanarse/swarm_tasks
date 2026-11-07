@@ -1,6 +1,7 @@
 """Builds the exact UDP text commands main.py's command loop expects (see
 main.py's `data.startswith(...)` branches and send_command_example.py) and
-sends them, one datagram per command. Fire-and-forget: main.py never replies.
+sends them, one datagram per command tagged with `|id=<token>`. main.py
+replies `ACK <id> received`, then `ACK <id> accepted` or `REJECT <id> <reason>`.
 
 Telemetry does not go through here. Drones stream MAVLink straight to the
 server's mavlink extension; this module only carries swarm operations.
@@ -10,11 +11,20 @@ from __future__ import annotations
 
 import json
 import socket
+import time
+import uuid
 from typing import Any, Mapping
+
+# Suffix main.py strips from a command and echoes in its replies.
+ID_MARK = "|id="
 
 
 class SwarmCommandError(ValueError):
     """Raised for an unknown command or missing/invalid arguments."""
+
+
+class SwarmNoResponse(OSError):
+    """main.py did not acknowledge a command in time."""
 
 
 def _as_wire_id(swarm_id: str) -> Any:
@@ -30,10 +40,62 @@ class SwarmCommandSender:
     default_direction: int = 1
     default_radius: int = 50
 
+    received_timeout: float = 1.5  # main.py must confirm receipt within this
+    result_timeout: float = 20.0  # ...and accept/reject within this
+
     def send_udp(self, message: str) -> None:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
             sock.sendto(message.encode("utf-8"), (self.host, self.port))
+        finally:
+            sock.close()
+
+    def send_and_wait(self, message: str) -> tuple[str, str]:
+        """Sends `message` tagged with a fresh command id and waits for
+        main.py's replies on the same socket (blocking; call from a worker
+        thread). Returns ("accepted", "") or ("rejected", reason), or
+        ("received", "") if main.py confirmed receipt but was still busy when
+        `result_timeout` ran out. Raises SwarmNoResponse when nothing came
+        back within `received_timeout`."""
+        cmd_id = uuid.uuid4().hex[:8]
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sock.sendto(
+                f"{message}{ID_MARK}{cmd_id}".encode("utf-8"), (self.host, self.port)
+            )
+            received = False
+            deadline = time.monotonic() + self.received_timeout
+            while True:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    if received:
+                        return "received", ""
+                    raise SwarmNoResponse(
+                        f"no reply from swarm code at {self.host}:{self.port} "
+                        f"(is main.py running?)"
+                    )
+                sock.settimeout(remaining)
+                try:
+                    data, _ = sock.recvfrom(4096)
+                except socket.timeout:
+                    continue  # loop re-checks the deadline
+                except ConnectionResetError:
+                    # Windows reports an ICMP "port unreachable" this way:
+                    # nothing is listening on the swarm code's port.
+                    raise SwarmNoResponse(
+                        f"swarm code not listening at {self.host}:{self.port} "
+                        f"(is main.py running?)"
+                    ) from None
+                parts = data.decode("utf-8", "replace").split(" ", 3)
+                if len(parts) < 3 or parts[1] != cmd_id:
+                    continue  # not ours
+                if parts[0] == "REJECT":
+                    return "rejected", " ".join(parts[2:])
+                if parts[2] == "accepted":
+                    return "accepted", ""
+                if parts[2] == "received" and not received:
+                    received = True
+                    deadline = time.monotonic() + self.result_timeout
         finally:
             sock.close()
 
@@ -64,6 +126,7 @@ class SwarmCommandSender:
             raise SwarmCommandError(f"bad arguments for {command!r}: {exc}") from exc
 
     def dispatch(self, command: str, uav_ids, kwds: Mapping[str, Any]) -> str:
+        """Fire-and-forget variant; returns the wire string."""
         message = self.build(command, uav_ids, kwds)
         self.send_udp(message)
         return message

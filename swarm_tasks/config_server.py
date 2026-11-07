@@ -65,10 +65,24 @@ NOTES = {
     "copter_speed whenever the real drone has moved ahead of the bot, so "
     "the bot can re-open its lead instead of getting walked down. Live, "
     "per-tick -- drops back to normal the moment the bot is back in front",
-    "chase_sep_m": "separation (metres) beyond which the BOT is judged too "
-    "far ahead of the drone -- speed ramps down from here to a floor at "
-    "resync_sep_m so both keep moving together. Must stay below "
-    "resync_sep_m",
+    "copter_chase_sep_m": "COPTER bot: gap (metres) to its drone beyond "
+    "which the BOT starts slowing so the drone can catch up. Keep below "
+    "copter_hold_sep_m. Live",
+    "copter_hold_sep_m": "COPTER bot: gap (metres) at which the bot is "
+    "slowed all the way to a stop (a copter can hover). Keep at or below "
+    "resync_sep_m. Live",
+    "fixedwing_chase_sep_m": "FIXEDWING/quadplane bot: gap (metres) beyond "
+    "which the BOT starts slowing so the aircraft can catch up. Keep below "
+    "fixedwing_hold_sep_m. Live",
+    "fixedwing_hold_sep_m": "FIXEDWING/quadplane bot: gap (metres) at which "
+    "the bot is down to half speed (a fixedwing cannot stop). Keep at or "
+    "below resync_sep_m. Live",
+    "copter_accel_scale": "multiplier on each COPTER's own WPNAV_ACCEL, "
+    "which limits how fast its bot speeds up, brakes and changes direction "
+    "so it cannot outrun the real drone. 1 = match the drone, 0 = no limit. "
+    "Live",
+    "copter_accel_fallback_mps2": "acceleration limit (m/s^2) used for a "
+    "copter whose WPNAV_ACCEL could not be read. Live",
     "resync_sep_m": "separation (metres) at which swarm.py gives up and "
     "teleports the bot onto the drone's real position, instead of guiding "
     "it back gradually -- only when the DRONE is the one ahead",
@@ -82,7 +96,20 @@ NOTES = {
     "hundreds) -- a copter is far slower and more precise than a "
     "fixedwing, so a fixedwing-scale lookahead sends it toward a point "
     "it may take minutes to reach",
+    "fixedwing_capture_radius_m": "how close (metres) a FIXEDWING/quadplane "
+    "bot must get to a waypoint to count it as reached. Applies immediately",
+    "copter_capture_radius_m": "how close (metres) a COPTER bot must get to a "
+    "waypoint to count it as reached. Applies immediately",
+    "fixedwing_separation_m": "minimum distance (metres) a FIXEDWING/"
+    "quadplane bot keeps from other bots. Keep it below the spacing between "
+    "neighbouring routes. Applies immediately",
+    "copter_separation_m": "minimum distance (metres) a COPTER bot keeps "
+    "from other bots. Keep it below the spacing between neighbouring routes. "
+    "Applies immediately",
     "tick_interval_s": "worker loop period",
+    "handover_chunk_m": "length (metres) of each piece of a leaving bot's "
+    "unflown route when other bots take it over; smaller spreads the work "
+    "more evenly, larger keeps each bot's path simpler",
     "reposition_interval_s": "min seconds between MAVLink DO_REPOSITION per bot",
     "debug_reposition": "print commanded vs actual position every 2s per bot",
     "endDistance": "geoToCart/cartToGeo scale -- other fields depend on it",
@@ -124,6 +151,7 @@ def _telemetry(swarm):
     vehicle_types = swarm.vehicle.vehicle_types
     sim_bots = swarm.s.swarm
     goal_jobs = swarm.goal_jobs
+    heights = list(getattr(swarm.Variables, "heights", []) or [])
 
     bots = []
     for i in range(len(drones)):
@@ -154,10 +182,17 @@ def _telemetry(swarm):
             bots.append(
                 {
                     "id": bot_id,
+                    "bot_id": i + 1,
+                    "sys_id": system_ids[i] if i < len(system_ids) else None,
                     "vehicle_type": (
                         vehicle_types[i] if i < len(vehicle_types) else None
                     ),
                     "removed": (i + 1) in swarm.removed_bots,
+                    # Height (m above home) this bot is commanded to fly at; the
+                    # server uses it to check a route against the terrain.
+                    "height": (
+                        heights[i] if i < len(heights) else None
+                    ),
                     "armed": getattr(drone, "armed", None),
                     "mode": getattr(mode, "name", None),
                     "lat": getattr(frame, "lat", None),
@@ -340,6 +375,17 @@ class _Handler(BaseHTTPRequestHandler):
                 )
             else:
                 self._send(200, json.dumps(_telemetry(self.swarm)), "application/json")
+        elif self.path == "/api/plan":
+            # What each drone is going to search, for the map in Skybrush Live.
+            board = getattr(self.swarm, "plan_board", None)
+            if board is None:
+                self._send(
+                    503,
+                    json.dumps({"error": "swarm not attached yet"}),
+                    "application/json",
+                )
+            else:
+                self._send(200, json.dumps(board.snapshot()), "application/json")
         else:
             self._send(404, "not found", "text/plain")
 

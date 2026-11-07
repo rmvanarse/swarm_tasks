@@ -4,6 +4,7 @@ objects to receive and send MAVLink messages.
 
 from __future__ import annotations
 
+import inspect
 from collections import defaultdict
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -396,7 +397,30 @@ def _create_mavlink_message(
         func = getattr(link, f"{_type.lower()}_encode")
     except AttributeError:
         raise ValueError(f"unknown MAVLink message type: {_type}") from None
+
+    # Messages sent to a UAV get target_system and target_component added, but
+    # some message types (e.g. TERRAIN_DATA) have no such fields: leave them out
+    # for those instead of failing to encode the message.
+    if "target_system" in kwds or "target_component" in kwds:
+        accepted = _encoder_parameters(_type.lower(), func)
+        for name in ("target_system", "target_component"):
+            if name in kwds and name not in accepted:
+                del kwds[name]
+
     return func(*args, **kwds)
+
+
+_encoder_parameter_cache: dict[str, frozenset[str]] = {}
+
+
+def _encoder_parameters(type_name: str, func) -> frozenset[str]:
+    """Names of the arguments of a MAVLink `<type>_encode` function (cached,
+    since the same dialect is used for every link)."""
+    names = _encoder_parameter_cache.get(type_name)
+    if names is None:
+        names = frozenset(inspect.signature(func).parameters)
+        _encoder_parameter_cache[type_name] = names
+    return names
 
 
 def _get_mavlink_factory(

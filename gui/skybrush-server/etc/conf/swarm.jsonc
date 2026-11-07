@@ -26,6 +26,30 @@
       "enabled": true
     },
 
+    // Terrain: ground elevation (SRTM, 30 m) for the shaded-relief map overlay
+    // in Live, height-above-ground warnings and terrain data for the drones.
+    // Tiles are downloaded on first use and kept on disk, so an area you have
+    // seen once keeps working offline. prefetch_areas are downloaded in the
+    // background at every start while online (tiles already on disk are
+    // skipped), so these places are ready for offline use. To prepare another
+    // area, add it here or POST {"lat": .., "lon": .., "radius_km": ..} to
+    // http://<server>:5000/terrain/prefetch (Live's Terrain layer has a
+    // "Download this area" button too). The area below is the SITL home.
+    "terrain": {
+      "enabled": true,
+      // Ready-made SRTM1 (30 m) tiles downloaded by hand from
+      // terrain.ardupilot.org for the SITL area (N12E079, N12E080, N13E079,
+      // N13E080). They are read first and need no internet. The ArduPilot .DAT
+      // versions of the same tiles, for the drones' SD cards or SITL, are in
+      // the "terrain" folder next to this "hgt" one.
+      "data_dirs": ["C:/Users/casr5/Documents/swarm_env/terrain/ardupilot/hgt"],
+      "prefetch_areas": [{ "lat": 12.9289, "lon": 80.0464, "radius_km": 30 }],
+      // Show a warning when a drone is closer than this to the ground, now or
+      // within lookahead_s seconds at its current velocity.
+      "min_clearance_m": 30,
+      "lookahead_s": 10
+    },
+
     // Stream B stays between the drones and main.py (swarm code). This
     // extension only forwards swarm operations (goal, search, split, stop...)
     // from Live to main.py over UDP.
@@ -35,7 +59,7 @@
       // at startup (run_main.bat's bind IP). 172.24.96.1 is the Windows-side
       // WSL address for local SITL testing; on the real two-machine setup it
       // is the swarm-master machine's IP.
-      "command_host": "192.168.2.184",
+      "command_host": "192.168.31.15",
       "command_port": 12008,
       // Skybrush UAV id (MAVLink system id) -> main.py id, for drones whose
       // two ids differ. Ids not listed are passed through unchanged. Example:

@@ -77,7 +77,7 @@ const propertiesForFeatureTypes: Record<FeatureType, FeatureTypeProperties> = {
     hasPoints: true,
   },
   [FeatureType.POINTS]: {
-    name: 'Marker',
+    name: 'Point',
     icon: FiberManualRecord,
     canBeMeasured: false,
     hasInterior: false,
@@ -101,6 +101,33 @@ const propertiesForFeatureTypes: Record<FeatureType, FeatureTypeProperties> = {
  */
 export function getNameOfFeatureType(featureType: FeatureType): string {
   return propertiesForFeatureTypes[featureType]?.name ?? 'Feature';
+}
+
+/**
+ * Returns the label a feature should get when it has none, derived from its
+ * ID: `marker` (or `point`) becomes "Point", `marker_1` becomes "Point 1",
+ * `path_2` becomes "Path 2". IDs that do not follow the pattern are returned
+ * as they are, so every feature ends up with some label.
+ */
+export function getDefaultLabelForFeature(
+  featureType: FeatureType,
+  id: string
+): string {
+  const match = id.match(/^(.*?)(?:_(\d+))?$/);
+  const base = (match?.[1] ?? id).toLowerCase();
+  const index = match?.[2];
+  const typeName = getNameOfFeatureType(featureType);
+  // "marker" is what point features used to be called
+  const knownBases = [typeName.toLowerCase()];
+  if (featureType === FeatureType.POINTS) {
+    knownBases.push('marker');
+  }
+
+  return knownBases.includes(base)
+    ? index
+      ? `${typeName} ${index}`
+      : typeName
+    : id;
 }
 
 /**

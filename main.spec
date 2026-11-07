@@ -1,5 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_all
+import os
+import sys
+
+import setuptools
+from PyInstaller.utils.hooks import collect_all, collect_submodules
+
+# pkg_resources (pulled in by dronekit/pymavlink) imports jaraco.* from the
+# private setuptools/_vendor folder, which PyInstaller 6.7 does not bundle on
+# its own: without this the exe stops at start-up with "No module named
+# 'jaraco'". Put that folder on the search path and bundle what is there.
+vendor_dir = os.path.join(os.path.dirname(setuptools.__file__), '_vendor')
+sys.path.insert(0, vendor_dir)
 
 datas = [('swarm_tasks\\envs\\worlds', 'swarm_tasks\\envs\\worlds')]
 binaries = []
@@ -10,13 +21,18 @@ tmp_ret = collect_all('pymavlink')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('lxml')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
+for vendored in ('jaraco', 'autocommand', 'inflect', 'more_itertools', 'typeguard', 'zipp', 'backports'):
+    try:
+        hiddenimports += collect_submodules(vendored)
+    except Exception:
+        pass
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
-    binaries=[],
+    pathex=[vendor_dir],
+    binaries=binaries,
     datas=datas,
-    hiddenimports=[],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -31,7 +47,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='main',
+    name='swarm-main',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -50,5 +66,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='main',
+    name='swarm-main',
 )

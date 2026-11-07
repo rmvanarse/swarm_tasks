@@ -19,3 +19,4 @@ tmp/
 __pycache__/
 skybrush.cfg
 ai
+.venv-build/

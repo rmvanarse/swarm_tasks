@@ -58,17 +58,26 @@ class Variables:
         # (lead_state), swarm.py gives up trying to guide the bot back
         # gradually and just teleports it onto the drone's real
         # position -- the gap's too big to close smoothly. See
-        # chase_sep_m below for the other direction (bot too far
+        # the *_chase_sep_m settings below for the other direction (bot too far
         # ahead), which is handled by slowing down instead.
         self.resync_sep_m = 100.0
-        # Separation (metres) beyond which the BOT (not the drone) is
-        # judged too far ahead -- swarm.py ramps the bot's speed down
-        # from its normal cruise at this distance to a floor at
-        # resync_sep_m, so the real drone gets a chance to close the
-        # gap and both keep moving together/simultaneously, instead of
-        # the bot continuing to pull away on its own until a hard
-        # resync is the only option. Must stay below resync_sep_m.
-        self.chase_sep_m = 40.0
+        # The BOT (not the drone) slows down when it gets too far ahead, so
+        # both keep moving together. Per vehicle type: beyond *_chase_sep_m
+        # the bot's speed ramps down, and at *_hold_sep_m it is at its floor
+        # (a copter can stop; a fixedwing keeps half its speed). Keep
+        # chase < hold <= resync_sep_m. The copter leash is tight because
+        # a copter lags right after a goal change (it must brake and turn).
+        self.copter_chase_sep_m = 10.0
+        self.copter_hold_sep_m = 30.0
+        self.fixedwing_chase_sep_m = 60.0
+        self.fixedwing_hold_sep_m = 100.0
+
+        # Copter acceleration limit for the bot, so it cannot outrun the real
+        # drone. The limit is read from each drone's WPNAV_ACCEL; this scale
+        # multiplies it (1.0 = match the drone, 0 = no limit). Used when a
+        # drone did not report WPNAV_ACCEL. Both are read on every tick.
+        self.copter_accel_scale = 1.0
+        self.copter_accel_fallback_mps2 = 2.5
         self.bank_angle_deg = bank_angle_deg
         # Lookahead distance (metres) ahead of a FIXEDWING bot that
         # compute_lookahead_target() projects the real MAVLink
@@ -91,6 +100,19 @@ class Variables:
         # reach even though its bot was already there.
         self.copter_lookahead_m = 20.0
 
+        # How close a bot must get to a waypoint to count as having reached
+        # it, per vehicle type. Read on every tick, so an edit in the config
+        # panel applies to the running mission straight away. The values are
+        # fixed here, not taken from the drone's own parameters.
+        self.fixedwing_capture_radius_m = 50.0
+        self.copter_capture_radius_m = 2.0
+
+        # Minimum distance a bot keeps from the other bots, per vehicle type.
+        # Also read on every tick. Keep it clearly below the spacing between
+        # neighbouring routes, or a bot can end up unable to reach its goal.
+        self.fixedwing_separation_m = 100.0
+        self.copter_separation_m = 20.0
+
         self.tick_interval_s = 0.1
         self.run_id = f"{time.strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:4]}"
         self.heights = []
@@ -100,6 +122,11 @@ class Variables:
         # keeps the actual command rate to the real vehicle throttled
         # independently of how fast the sim ticks.
         self.reposition_interval_s = 0.4
+
+        # Self-heal hand-over: the work a bot leaves behind is cut into
+        # connected pieces of about this many metres, and each piece goes to
+        # the bot expected to finish earliest (see Swarm._hand_over).
+        self.handover_chunk_m = 150.0
         # Print what each bot is actually commanding, once per bot every
         # 2s: the lat/lon sent, where the drone reports itself, and how
         # far the bot has run ahead of it. Set False to silence.

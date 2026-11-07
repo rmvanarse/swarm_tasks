@@ -14,7 +14,9 @@ import Image from '@mui/icons-material/Image';
 import Info from '@mui/icons-material/Info';
 import Map from '@mui/icons-material/Map';
 import MyLocation from '@mui/icons-material/MyLocation';
+import Route from '@mui/icons-material/Route';
 import Streetview from '@mui/icons-material/Streetview';
+import Terrain from '@mui/icons-material/Terrain';
 import Timeline from '@mui/icons-material/Timeline';
 import TrackChanges from '@mui/icons-material/TrackChanges';
 import type BaseLayer from 'ol/layer/Base';
@@ -42,6 +44,8 @@ export enum LayerType {
   MISSION_INFO = 'home',
 
   OWN_LOCATION = 'ownLocation',
+  SWARM_PLAN = 'swarmPlan',
+  TERRAIN = 'terrain',
   TILE_SERVER = 'tileServer',
   UAVS = 'uavs',
   UAV_TRACE = 'uavTrace',
@@ -62,6 +66,8 @@ export type Layer<P = unknown> = {
  */
 export const LayerTypes: readonly LayerType[] = [
   LayerType.BASE,
+  LayerType.TERRAIN,
+  LayerType.SWARM_PLAN,
   LayerType.TILE_SERVER,
   LayerType.GRATICULE,
   LayerType.FEATURES,
@@ -217,6 +223,26 @@ const propertiesForLayerTypes: Record<
     parameters: {
       showAccuracy: true,
       showOrientation: true,
+    },
+  },
+  [LayerType.SWARM_PLAN]: {
+    label: 'Search plan',
+    icon: Route,
+    parameters: {
+      opacity: 0.9,
+      showStrips: true,
+      showSearchLines: true,
+      showPaths: true,
+      showLabels: true,
+    },
+  },
+  [LayerType.TERRAIN]: {
+    label: 'Terrain',
+    icon: Terrain,
+    parameters: {
+      style: 'hillshade',
+      opacity: 0.7,
+      contours: true,
     },
   },
   [LayerType.TILE_SERVER]: {

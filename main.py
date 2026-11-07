@@ -54,6 +54,7 @@ if __name__ == "__main__":
         )
         receiver = UDPReceiver((ip, 12008), callback=callBack.call_back)
         receiver.start()
+        callBack.attach(receiver)
         # Live-editable config panel + read-only /api/telemetry for the GUI
         # bridge. Same Variables object Swarm holds, so an edit lands on the
         # workers' next tick -- no restart. Started only after swarm exists,
@@ -131,10 +132,16 @@ if __name__ == "__main__":
                     continue
 
                 elif data.startswith("split"):
-                    current_process(swarm, stop=True, call_back_action=swarm.stopAction)
+                    # No global stop: like goal, a split replaces only the
+                    # jobs that own its bots, so splits can run side by side.
                     msg_parts = data.split("_")
                     print("msg_parts", msg_parts, len(msg_parts))
-                    selected_uav_ids = to_bot_ids(vehicles, json.loads(msg_parts[2]))
+                    # Live sends the ids in the order they were selected, but the
+                    # split gives the first N bots to point 1, the next N to
+                    # point 2 ... so use plain bot order: 1-5 then 6-10.
+                    selected_uav_ids = sorted(
+                        set(to_bot_ids(vehicles, json.loads(msg_parts[2])))
+                    )
                     grid_space = json.loads(msg_parts[3])
                     coverage_area = json.loads(msg_parts[4])
                     center_lat_lon_array = json.loads(
@@ -149,6 +156,8 @@ if __name__ == "__main__":
                     callBack.set_data()
 
                 elif data.startswith("specificsplit"):
+                    # No global stop: only the jobs owning these bots are
+                    # replaced (see swarm._start_route_job).
                     msg_parts = data.split("_")
                     print("msg_parts", msg_parts)
                     center_lat_lon_array = json.loads(
@@ -172,16 +181,19 @@ if __name__ == "__main__":
                         difference=diff,
                     )
                     print(variables.heights)
+                    # Climb/descend the drones that are already flying; the
+                    # new heights are otherwise only used by goal/search.
+                    print("heights applied to bots:", swarm.apply_heights())
                     callBack.set_data()
 
                 else:
                     print(f"in else data: {data}")
-                    # sys.exit()
-                    callBack.set_data()
-            except Exception:
+                    callBack.set_data(error=f"unknown command: {data[:40]!r}")
+            except Exception as exc:
                 # A bad command must not take the whole swarm process down:
                 # report it and drop the command so the loop keeps serving.
+                # The sender gets the reason as a REJECT reply.
                 traceback.print_exc()
-                callBack.set_data()
+                callBack.set_data(error=exc)
     except Exception:
         traceback.print_exc()

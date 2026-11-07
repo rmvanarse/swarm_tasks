@@ -9,6 +9,10 @@ import { getNearestFeatureIdForTooltip } from '~/features/session/selectors';
 import { setFeatureIdForTooltip } from '~/features/session/slice';
 import { openUAVDetailsDialog } from '~/features/uavs/details';
 import {
+  getDefaultLabelForFeature,
+  getNameOfFeatureType,
+} from '~/model/features';
+import {
   featureIdToGlobalId,
   globalIdToFeatureId,
   globalIdToUavId,
@@ -16,6 +20,7 @@ import {
   isFeatureId,
   isUavId,
 } from '~/model/identifiers';
+import { chooseUniqueName } from '~/utils/naming';
 
 import {
   getFeatureById,
@@ -66,8 +71,20 @@ export const addFeatureIfMissing =
   };
 
 export const addFeatureWithName = (feature, name) => (dispatch, getState) => {
-  const id = getProposedIdForNewFeature(getState(), feature, name);
-  dispatch(addFeatureById({ id, feature }));
+  const state = getState();
+  const id = getProposedIdForNewFeature(state, feature, name);
+
+  // Every feature gets a visible label ("Point", "Point 1", "Path", ...),
+  // unique among the labels already in use.
+  const existingLabels = getFeaturesInOrder(state).map(
+    (f) => f.label || getDefaultLabelForFeature(f.type, f.id)
+  );
+  const label = chooseUniqueName(
+    feature.label || getNameOfFeatureType(feature.type),
+    existingLabels
+  );
+
+  dispatch(addFeatureById({ id, feature, properties: { label } }));
 };
 
 export const cloneFeatureById = (id, overrides) => (dispatch, getState) => {

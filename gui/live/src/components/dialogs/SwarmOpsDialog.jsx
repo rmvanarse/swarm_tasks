@@ -123,7 +123,13 @@ const centersOf = (features, ids) =>
   );
 
 const GoalForm = ({ uavIds, features, onSubmit }) => {
-  const pathFeatures = featuresOfType(features, FeatureType.LINE_STRING);
+  // A goal is a path (several waypoints, flown in order) or a single point
+  // (one waypoint): offer both kinds of drawn feature.
+  const pathFeatures = features.filter(
+    (feature) =>
+      feature.type === FeatureType.LINE_STRING ||
+      feature.type === FeatureType.POINTS
+  );
   return (
     <Form
       initialValues={{
@@ -148,13 +154,13 @@ const GoalForm = ({ uavIds, features, onSubmit }) => {
         <Box>
           <DronePlaceholderList title='Selection:' items={uavIds} mt={0} mb={1} />
           <Typography variant='body2' color='textSecondary' sx={{ mb: 1 }}>
-            Draw the route with the <strong>Draw path</strong> map tool, then
-            pick it below.
+            Draw a route with the <strong>Draw path</strong> map tool, or a
+            single target with <strong>Draw point</strong>, then pick it below.
           </Typography>
           <FeatureField
             features={pathFeatures}
-            label='Waypoint path'
-            drawToolHint='Draw path'
+            label='Goal (path or point)'
+            drawToolHint='Draw path or Draw point'
           />
           <TextField
             name='direction'

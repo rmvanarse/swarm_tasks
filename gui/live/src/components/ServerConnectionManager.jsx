@@ -564,7 +564,9 @@ async function executeTasksAfterConnection(dispatch, getState) {
     }
 
     // Check whether the server supports the following optional features
-    const OPTIONAL_FEATURES = ['virtual_uavs', 'map_cache', 'studio'];
+    // (virtual_uavs is not asked about: this server has no such extension and
+    // asking makes it log an import error every time Live connects.)
+    const OPTIONAL_FEATURES = ['map_cache', 'studio', 'terrain'];
     dispatch(
       addServerFeatures(
         await Promise.all(

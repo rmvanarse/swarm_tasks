@@ -8,6 +8,7 @@ from swarm_tasks.mission.bezier_curve import BezierCurveMultiple, check_coverage
 from swarm_tasks.controllers.guided import line_waypoint_guidance
 from swarm_tasks.utils import waypoints as wp
 from swarm_tasks.Thread import Thread
+from swarm_tasks.plan_board import PlanBoard, thin as thin_points
 from time import sleep
 import threading
 import traceback
@@ -18,7 +19,7 @@ import random
 from swarm_tasks.mission.groupsplitauto import AutoSplitMission
 from swarm_tasks.mission.groupsplitspecific import SpecificSplitMission
 from swarm_tasks.telemetry_log import setup_swarm_logger
-from math import sin, cos, pi
+from math import sin, cos, pi, hypot
 
 
 class _NullAxes:
@@ -114,7 +115,13 @@ class Swarm:
         # given (so "covered 5 of 8" can be reported).
         self.removed_bots = set()
         self.orphan_work = []  # FIFO of {"from": id, "points": [...]}
+        # Pieces of a leaving bot's route handed to another bot but not flown
+        # yet: {"owner": bot id, "points": [...], "job_ids": the job's id set}.
+        # A bot of the same job that runs out of work may take one back.
+        self.handover_chunks = []
         self.assigned_seq = {}  # swarm index -> the list it was handed
+        # What each drone is going to search, for the map in Skybrush Live.
+        self.plan_board = PlanBoard()
         self._heal_lock = threading.Lock()
         # Workers run on background threads; matplotlib/Qt calls are not
         # thread-safe, so they only publish state here and the main
@@ -192,11 +199,15 @@ class Swarm:
         self.s.speed = self._resolve_bot_speeds()
         self.s.bank_angle_deg = self._resolve_bot_bank_angles()
         self.s._populate(positions=positions, num_bots=num_bots)
-        # Tag every freshly built bot with its drone's MAVLink system id.
-        # Bots are rebuilt on each mission command, so this has to be
-        # redone here rather than once at construction.
-        for bot, sysid in zip(self.s.swarm, self.vehicle.system_ids):
-            bot.sysid = sysid
+        # Tag every freshly built bot with its own id (1-based position) and
+        # its drone's MAVLink system id. Bots are rebuilt on each mission
+        # command, so this has to be redone here rather than once at
+        # construction.
+        for position, (bot, sys_id) in enumerate(
+            zip(self.s.swarm, self.vehicle.system_ids), start=1
+        ):
+            bot.id = position
+            bot.sys_id = sys_id
 
     def stopAction(self):
         """call_back_action handed to Thread.stop(): the list of things
@@ -242,7 +253,9 @@ class Swarm:
         # membership fact that has to outlive a stop, or the next
         # search would silently fly it again. add_bot() puts it back.
         self.orphan_work = []
+        self.handover_chunks = []
         self.assigned_seq.clear()
+        self.plan_board.clear()
         # Cancel every bot's leftover goals -- the run they belonged to
         # is over. Without this a remove_bot() AFTER a stop harvests the
         # dead run's queue into orphan_work and the next run flies it;
@@ -311,14 +324,18 @@ class Swarm:
         threads = [job["thread"] for job in self.goal_jobs]
         self.current_function["goal"] = [bool(threads), threads]
 
-    @staticmethod
-    def _avoid_sep_for_type(vtype):
+    def _avoid_sep_for_type(self, vtype):
         """Same type-based bot-bot separation _guide_and_reposition()
         uses for avoid_min_sep/avoid_radius -- pulled out here too so
         _formation_offsets() can size a goal-command formation ring
         against the exact same numbers, instead of duplicating (and
-        risking drifting out of sync with) the constants."""
-        return 100.0 if vtype == "fixedwing" else 15.0
+        risking drifting out of sync with) the constants.
+
+        Read from Variables on every call (fixedwing_separation_m,
+        copter_separation_m), so a config-panel edit applies at once."""
+        if vtype == "fixedwing":
+            return self.Variables.fixedwing_separation_m
+        return self.Variables.copter_separation_m
 
     def _formation_offsets(self, owned):
         """Per-bot (dx, dy) spacing offset (metres) for a goal() command
@@ -376,6 +393,65 @@ class Swarm:
         self.assigned_seq[index] = points
 
     @staticmethod
+    def _outline(strips):
+        """Closed rectangle [lat, lon] x5 around these strips."""
+        s = min(t["south"] for t in strips)
+        n = max(t["north"] for t in strips)
+        w = min(t["west"] for t in strips)
+        e = max(t["east"] for t in strips)
+        ring = [[s, w], [s, e], [n, e], [n, w], [s, w]]
+        return [[round(a, 7), round(b, 7)] for a, b in ring]
+
+    def _publish_plan(self, kind, label, areas, strips):
+        """Show what the bots in `strips` are going to search.
+
+        areas: [{"center": [lat, lon], "size_m": metres, "ids": [bot ids]}]
+        strips: {bot id: the planner's record of its strip and sweep lines}
+        The path of each bot is the route it was really given. This only feeds
+        the map, so it must never get in the way of the mission itself.
+        """
+        try:
+            bots = []
+            for bot_id, record in strips.items():
+                index = bot_id - 1
+                if not 0 <= index < len(self.s.swarm) or index not in self.assigned_seq:
+                    continue  # no route for this bot: nothing to show
+                path = []
+                for x, y in thin_points(self.assigned_seq[index]):
+                    lat, lon = cartToGeo(
+                        self.Variables.origin, self.Variables.endDistance, [x, y]
+                    )
+                    path.append([round(float(lat), 7), round(float(lon), 7)])
+                area = next(
+                    (k for k, a in enumerate(areas) if bot_id in a.get("ids", [])), 0
+                )
+                bots.append(
+                    {
+                        "bot": bot_id,
+                        "sys_id": getattr(self.s.swarm[index], "sys_id", bot_id),
+                        "area": area,
+                        "strip": {
+                            k: record[k] for k in ("south", "north", "west", "east")
+                        },
+                        "sweeps": record["sweeps"],
+                        "path": path,
+                    }
+                )
+            if bots:
+                # Outline each area as what its strips really cover (the search
+                # leaves a small gap, so that is a bit less than the full square).
+                shown = []
+                for k, a in enumerate(areas):
+                    strips = [b["strip"] for b in bots if b["area"] == k]
+                    shown.append(
+                        {**a, "ring": self._outline(strips)} if strips else a
+                    )
+                self.plan_board.publish(kind, label, shown, bots)
+        except Exception:
+            print("plan: could not publish the plan for the map")
+            traceback.print_exc()
+
+    @staticmethod
     def _remaining_points(bot, was_done=None):
         """What this bot still has to fly: the goal it is on (if it has
         not captured it yet) plus everything still queued behind it.
@@ -421,6 +497,7 @@ class Swarm:
                 bot.done = was_done
                 return []
             self.removed_bots.add(bot_id)
+            self.plan_board.mark_bots([bot_id], "removed")
             remaining = self._remaining_points(bot, was_done)
             assigned = self.assigned_seq.get(index, [])
             covered = max(0, len(assigned) - len(remaining))
@@ -468,6 +545,10 @@ class Swarm:
         exactly the hand-over rule: whoever is free first flies it.
         """
         with self._heal_lock:
+            has_orphans = bool(self.orphan_work)
+        if not has_orphans:
+            return self._steal_chunk(index)
+        with self._heal_lock:
             if not self.orphan_work or (index + 1) in self.removed_bots:
                 return False
             work = self.orphan_work.pop(0)
@@ -480,7 +561,7 @@ class Swarm:
 
     def _owned_indices(self):
         """Swarm indices currently commanded by SOME goal job."""
-        return {i - 1 for job in self.goal_jobs for i in job["ids"]}
+        return {i - 1 for job in self.goal_jobs for i in tuple(job["ids"])}
 
     def _publish_state(self, updates):
         """Merge one worker's slice of render state into the shared dict."""
@@ -493,6 +574,210 @@ class Swarm:
         with self._gui_lock:
             for i in indices:
                 self._gui_state.pop(i, None)
+
+    @staticmethod
+    def _route_length(points, start=None):
+        """Length in metres of the path through `points` (from `start` first,
+        if given)."""
+        total, prev = 0.0, start
+        for p in points:
+            if prev is not None:
+                total += hypot(p[0] - prev[0], p[1] - prev[1])
+            prev = p
+        return total
+
+    @classmethod
+    def _chunk_route(cls, points, chunk_m):
+        """Cut a route into consecutive pieces of about chunk_m metres. A
+        short leftover at the end is merged into the piece before it."""
+        points = list(points)
+        if chunk_m is None or chunk_m <= 0 or len(points) < 2:
+            return [points]
+        chunks, current, length = [], [points[0]], 0.0
+        for prev, p in zip(points, points[1:]):
+            current.append(p)
+            length += hypot(p[0] - prev[0], p[1] - prev[1])
+            if length >= chunk_m:
+                chunks.append(current)
+                current, length = [], 0.0
+        if current:
+            if chunks and length < chunk_m / 2:
+                chunks[-1].extend(current)
+            else:
+                chunks.append(current)
+        return chunks
+
+    def _plan_state(self, bot_id):
+        """Where a bot will be, and when, once its current route is flown:
+        {"end": (x, y), "t": seconds from now, "speed": m/s}. An idle bot is
+        free now, at its current position."""
+        bot = self.s.swarm[bot_id - 1]
+        speed = max(float(bot.max_speed), 1e-6)
+        here = (bot.x, bot.y)
+        if bot.done:
+            return {"end": here, "t": 0.0, "speed": speed}
+        route = []
+        if bot.goal_exists() and bot.goal is not None:
+            route.append(tuple(bot.goal))
+        route.extend(tuple(p) for p in bot.goal_queue)
+        end = route[-1] if route else here
+        return {
+            "end": end,
+            "t": self._route_length(route, here) / speed,
+            "speed": speed,
+        }
+
+    def _hand_over(self, from_id, points, candidates, job_ids=None):
+        """Share the unflown `points` of bot `from_id` among `candidates`.
+
+        The route is cut into pieces of about Variables.handover_chunk_m
+        metres. Each piece goes to the bot that would finish earliest if it
+        also flew it: time to finish its own route, plus the flight from
+        where that route ends to the piece, plus the piece itself, all at
+        that bot's own speed. Every assignment raises that bot's estimate, so
+        the work spreads out instead of piling on the nearest bot, and faster
+        aircraft take more. A busy bot flies its pieces after its own route;
+        an idle bot starts at once. With nobody left, the points wait in
+        orphan_work for the first free bot, as in remove_bot().
+        """
+        keepers = [k for k in candidates if k not in self.removed_bots]
+        if not keepers:
+            self.orphan_work.append({"from": from_id, "points": points})
+            print(f"Bot {from_id}: {len(points)} points left for the next free bot")
+            return
+
+        chunks = self._chunk_route(
+            points, getattr(self.Variables, "handover_chunk_m", 150.0)
+        )
+        state = {k: self._plan_state(k) for k in keepers}
+        plan = {k: [] for k in keepers}
+        for chunk in chunks:
+            length = self._route_length(chunk)
+
+            def finish(k, chunk=chunk, length=length):
+                st = state[k]
+                fly_to = hypot(st["end"][0] - chunk[0][0], st["end"][1] - chunk[0][1])
+                return st["t"] + (fly_to + length) / st["speed"]
+
+            best = min(keepers, key=finish)
+            state[best]["t"] = finish(best)
+            state[best]["end"] = chunk[-1]
+            plan[best].append(chunk)
+
+        for k, taken in plan.items():
+            if not taken:
+                continue
+            bot = self.s.swarm[k - 1]
+            flat = [p for chunk in taken for p in chunk]
+            if bot.done:
+                self._assign(k - 1, flat)
+                stealable = taken[1:]  # the first piece is already its goal
+            else:
+                bot.goal_queue.extend(flat)
+                self.assigned_seq[k - 1] = self.assigned_seq.get(k - 1, []) + flat
+                stealable = taken
+            for chunk in stealable:
+                self.handover_chunks.append(
+                    {"owner": k, "points": chunk, "job_ids": job_ids}
+                )
+
+        summary = ", ".join(
+            f"bot {k} x{len(taken)} (done in ~{state[k]['t']:.0f}s)"
+            for k, taken in plan.items()
+            if taken
+        )
+        print(
+            f"Self-heal: bot {from_id}'s {len(points)} points in {len(chunks)} "
+            f"piece(s) -> {summary}"
+        )
+
+    @staticmethod
+    def _find_run(queue, points):
+        """Index where `points` appear consecutively in `queue`, else None."""
+        n = len(points)
+        for i in range(len(queue) - n + 1):
+            if queue[i] == points[0] and list(queue[i : i + n]) == list(points):
+                return i
+        return None
+
+    def _steal_chunk(self, index):
+        """An idle bot takes back the nearest handed-over piece that no one
+        has started, from another bot of its own job. Corrects for the
+        finish-time estimate being off. Returns True if it took one."""
+        me = index + 1
+        if me in self.removed_bots:
+            return False
+        bot = self.s.swarm[index]
+        with self._heal_lock:
+            best = None
+            for rec in list(self.handover_chunks):
+                owner, jobs = rec["owner"], rec["job_ids"]
+                if jobs is None or owner == me or me not in jobs or owner not in jobs:
+                    continue
+                queue = self.s.swarm[owner - 1].goal_queue
+                at = self._find_run(queue, rec["points"])
+                if at is None:  # already flown or reassigned
+                    self.handover_chunks.remove(rec)
+                    continue
+                d = hypot(bot.x - rec["points"][0][0], bot.y - rec["points"][0][1])
+                if best is None or d < best[0]:
+                    best = (d, rec, at)
+            if best is None:
+                return False
+            _, rec, at = best
+            queue = self.s.swarm[rec["owner"] - 1].goal_queue
+            n = len(rec["points"])
+            if list(queue[at : at + n]) != list(rec["points"]):
+                return False
+            del queue[at : at + n]
+            self.handover_chunks.remove(rec)
+        self._assign(index, rec["points"])
+        print(
+            f"Self-heal: idle bot {me} took {n} waiting points back from bot "
+            f"{rec['owner']}"
+        )
+        return True
+
+    def detach_bots(self, ids, hand_over=False):
+        """Take these bots out of the jobs that own them, WITHOUT stopping
+        the other bots of those jobs.
+
+        A job that owns only bots from `ids` is stopped as a whole. A job
+        that also owns other bots keeps running for them; the detached
+        bots just stop being commanded by it. With hand_over, the points a
+        detached bot had not flown yet go to the nearest bot still in that
+        job, so the area it was covering still gets finished.
+        """
+        wanted = set(ids)
+        # Their share of the plan stays on the map (someone finishes it).
+        self.plan_board.mark_bots(wanted, "left")
+        for job in list(self.goal_jobs):
+            mine = job["ids"] & wanted
+            if not mine or job["ids"] <= wanted:
+                continue  # not ours, or the whole job goes (stop below)
+            # Only bots that stay in the job may take over: never one that
+            # is itself about to leave in this same command.
+            keepers = sorted(job["ids"] - wanted)
+            for bot_id in sorted(mine):
+                index = bot_id - 1
+                bot = self.s.swarm[index]
+                with self._heal_lock:
+                    # Freeze before reading the queue, as remove_bot() does,
+                    # so the worker cannot advance it under us.
+                    was_done = bot.done
+                    bot.done = True
+                    remaining = self._remaining_points(bot, was_done)
+                    job["ids"].discard(bot_id)
+                    bot.clear_goal_queue()
+                    if hand_over and remaining:
+                        self._hand_over(bot_id, remaining, keepers, job["ids"])
+                bot.done = False
+                self._clear_state([index])
+                print(
+                    f"Bot {bot_id} left its job; the job continues for "
+                    f"{sorted(job['ids'])}"
+                )
+        self.stop_goal_jobs(ids)
 
     def stop_goal_jobs(self, ids=None, timeout=5.0):
         """Stop the goal jobs owning any of `ids` (all of them if ids is
@@ -692,9 +977,18 @@ class Swarm:
             # chasing, so bump the bot's speed to re-open its lead instead
             # of just letting the drone walk it down every tick this keeps
             # happening.
+            # How far the bot may get ahead of its drone before it starts
+            # to slow down (chase), and the gap at which it is slowed all the
+            # way to its floor (hold). Per vehicle type, from the config panel.
+            if b.vehicle_type == "fixedwing":
+                chase_sep = self.Variables.fixedwing_chase_sep_m
+                hold_sep = self.Variables.fixedwing_hold_sep_m
+            else:
+                chase_sep = self.Variables.copter_chase_sep_m
+                hold_sep = self.Variables.copter_hold_sep_m
             if lead_state:
                 panel_speed += self.Variables.lead_speed_boost
-            elif dis > self.Variables.chase_sep_m:
+            elif dis > chase_sep:
                 # The BOT is the one too far ahead this time (the drone
                 # hasn't passed it, but the gap is past chase_sep_m) --
                 # both have to keep moving simultaneously, not just the
@@ -707,8 +1001,8 @@ class Swarm:
                 # in place, so it keeps at least half cruise speed even at
                 # its slowest -- it still closes the gap, just slower,
                 # rather than stalling.
-                span = max(self.Variables.resync_sep_m - self.Variables.chase_sep_m, 1e-6)
-                frac_over = min((dis - self.Variables.chase_sep_m) / span, 1.0)
+                span = max(hold_sep - chase_sep, 1e-6)
+                frac_over = min((dis - chase_sep) / span, 1.0)
                 floor_frac = 0.5 if b.vehicle_type == "fixedwing" else 0.0
                 panel_speed *= 1.0 - frac_over * (1.0 - floor_frac)
             if b.max_speed != panel_speed:
@@ -745,12 +1039,25 @@ class Swarm:
         # instead of the same hardcoded 50.0 for every bot regardless
         # of type.
         radius = self.vehicle.radii[i] if i < len(self.vehicle.radii) else None
+        # The capture radius comes from Variables for both types (read fresh
+        # every tick, so a config-panel edit applies at once), not from the
+        # drone's WPNAV_RADIUS.
         if b.vehicle_type == "fixedwing":
             loiter_radius = radius or b.turn_radius() or self.Variables.vehicle_loiter_radius_min_m
-            capture_radius = 50.0
+            capture_radius = self.Variables.fixedwing_capture_radius_m
         else:
             loiter_radius = None
-            capture_radius = radius or 50.0
+            capture_radius = self.Variables.copter_capture_radius_m
+            # Hold the bot to the real drone's acceleration limit (its own
+            # WPNAV_ACCEL), so a new goal or a reversal does not make the bot
+            # run away from a drone that still has to brake and turn.
+            # copter_accel_scale: 1 = match the drone, 0 = off.
+            accels = getattr(self.vehicle, "accels", [])
+            accel = accels[i] if i < len(accels) else None
+            if accel is None:
+                accel = self.Variables.copter_accel_fallback_mps2
+            scale = float(self.Variables.copter_accel_scale or 0.0)
+            b.accel_limit = accel * scale if scale > 0 else None
 
         # Hybrid swarm: how much separation to keep from other bots also
         # has to match each vehicle's own scale. 100m is reasonable for
@@ -901,7 +1208,7 @@ class Swarm:
         ]
         if not active:
             print("search: every bot has been removed -- nothing to fly")
-            return
+            raise ValueError("every bot has been removed from the swarm")
         if len(active) != int(effective_num_uavs):
             print(
                 f"search: planning for {len(active)} active bot(s) "
@@ -955,6 +1262,21 @@ class Swarm:
             # Newest route only: replaces this bot's previous route line.
             xs, ys = zip(*seq)
             self.gui.show_route([index], xs, ys)
+
+        # curve.plan is numbered 1, 2, ... in the order of `active`
+        self._publish_plan(
+            "search",
+            "Search",
+            [
+                {
+                    "center": [float(center_lat), float(center_lon)],
+                    "size_m": float(coverage_area),
+                    "ids": [i + 1 for i in active],
+                }
+            ],
+            {active[k] + 1: rec for k, rec in ((n - 1, r) for n, r in curve.plan.items())
+             if k < len(active)},
+        )
 
         self.gui.run()
 
@@ -1022,6 +1344,212 @@ class Swarm:
 
         self.current_function["search"] = [True, thread]
 
+    def apply_heights(self):
+        """Sends every airborne copter to its new commanded height now
+        (fixed-wing and quadplane bots are left alone).
+
+        Variables.heights is otherwise read only inside a running goal/search
+        loop, so changing it after a plain takeoff did nothing. Each flying
+        drone gets a reposition to its current lat/lon at heights[i]; drones
+        a guidance loop is already steering (a reposition in the last few
+        seconds) are skipped, since that loop picks the new height up itself.
+        Returns the list of bot ids that were sent.
+        """
+        sent = []
+        now = time()
+        quiet_s = 2 * self.Variables.reposition_interval_s
+        for i, drone in enumerate(self.vehicle.drones):
+            if i >= len(self.Variables.heights):
+                print(f"apply_heights: bot {i + 1} skipped: no height set")
+                continue
+            if (i + 1) in self.removed_bots:
+                print(f"apply_heights: bot {i + 1} skipped: removed from swarm")
+                continue
+            vtype = (
+                self.vehicle.vehicle_types[i]
+                if i < len(self.vehicle.vehicle_types)
+                else None
+            )
+            if vtype == "fixedwing":  # fixed-wing and quadplane: copters only
+                continue
+            if now - self._last_reposition_time.get(i, 0) < quiet_s:
+                print(f"apply_heights: bot {i + 1} skipped: a goal/search is steering it")
+                continue
+            try:
+                frame = drone.location.global_relative_frame
+                # Altitude only: this project's dronekit ignores copter
+                # heartbeats, so drone.armed never turns True for a copter.
+                if frame.alt is None or frame.alt < 1.0:
+                    print(
+                        f"apply_heights: bot {i + 1} skipped: not flying "
+                        f"(alt={frame.alt})"
+                    )
+                    continue
+                send_reposition(
+                    drone, frame.lat, frame.lon, self.Variables.heights[i]
+                )
+                sent.append(i + 1)
+            except Exception as exc:
+                print(f"apply_heights: bot {i + 1} failed: {exc!r}")
+        return sent
+
+    def _run_owned_job(self, ids, owned, stop_event, label):
+        """Worker loop of one per-bot job (goal, split, specific split).
+
+        Steers only the bots in `ids` (bot ids, 1-based; `owned` is the same
+        as swarm indices) until `stop_event` or the shared isToStop fires.
+        Bots belonging to other jobs are left alone, which is what lets
+        several jobs fly at the same time.
+        """
+        reported_done = set()  # bots already announced as finished
+        while True:
+            # This job's OWN event, so stopping the goal for one set
+            # of bots leaves the others running. isToStop is still
+            # honoured: a full stop has to take everything.
+            if stop_event.is_set() or self.isToStop:
+                print(f"{label} for bots {sorted(ids)} stopped")
+                self._clear_state([i - 1 for i in tuple(ids)])
+                break
+            sleep(self.Variables.tick_interval_s)
+            updates = {}
+            try:
+                # Bots some OTHER job is flying: hands off. Snapping
+                # them to their raw drone position below would drag
+                # them back every tick and fight that job's guidance.
+                busy = self._owned_indices()
+                for i, b in enumerate(self.s.swarm):
+                    v_lat, v_lon = (
+                        self.vehicle.drones[i].location.global_relative_frame.lat,
+                        self.vehicle.drones[i].location.global_relative_frame.lon,
+                    )
+                    vx, vy = geoToCart(
+                        self.Variables.origin,
+                        self.Variables.endDistance,
+                        [v_lat, v_lon],
+                    )
+                    # rx, ry = (
+                    #     vx / 2,
+                    #     vy / 2,
+                    # )
+                    if not (i + 1) in ids:
+                        # Not ours. If nothing else is flying it either,
+                        # park its marker on the drone's live position so
+                        # the plot still tracks that aircraft.
+                        if i not in busy:
+                            b.x, b.y, b.theta = (
+                                vx,
+                                vy,
+                                compass_to_math_rad(self.vehicle.drones[i].heading),
+                            )
+                        continue
+                    if (i + 1) in self.removed_bots:
+                        continue
+                    if (
+                        b.done
+                        and not self._claim_orphan_work(i)
+                        and not b.loitering
+                    ):
+                        # Report it once, not on every tick.
+                        if (i + 1) not in reported_done:
+                            reported_done.add(i + 1)
+                            print(f"Bot: {i+1} is completed goal")
+                        continue
+                    # Working again (new goal, or picked up orphaned work).
+                    reported_done.discard(i + 1)
+
+                    # Bot advances its own line every tick regardless of vehicle
+                    # proximity -- it's the path planner here -- but arrival_gate
+                    # stops it handing off to the NEXT queued waypoint until the
+                    # real vehicle has also gotten near the current one, so sim
+                    # kinematics (much faster than real flight) can't run the
+                    # bot far ahead of where the vehicle actually is.
+                    x, y, theta = b.get_pose()
+
+                    tx, ty = self._guide_and_reposition(i, b, x, y, theta, vx, vy)
+                    updates[i] = (
+                        b.goal if b.goal_exists() else None,
+                        (vx, vy),
+                        (tx, ty),
+                    )
+            except Exception:
+                # Thread.run() has no handler, so an exception here
+                # would kill this job outright and the only sign
+                # would be drones that quietly stop being commanded.
+                print("ERROR in worker tick:")
+                traceback.print_exc()
+            self._publish_state(updates)
+
+
+    def _routes_by_bot(self, split, bot_ids):
+        """{swarm index: [points]} for the bots in `bot_ids` that the planner
+        wrote a route file for, skipping removed bots."""
+        indices, paths = [], []
+        for bot_id in bot_ids:
+            index = bot_id - 1
+            path = split._path_csv(bot_id)
+            if (
+                os.path.exists(path)
+                and 0 <= index < len(self.s.swarm)
+                and bot_id not in self.removed_bots
+            ):
+                indices.append(index)
+                paths.append(path)
+        return dict(zip(indices, wp.load_goals_for_swarm(paths)))
+
+    def _start_route_job(self, routes, label):
+        """Start one job flying pre-planned routes, for just those bots.
+
+        routes: {swarm index: [points]}. Like goal(): stops only the jobs
+        that own one of these bots (and a running search, which drives every
+        bot), snaps just these bots onto their drones, and leaves all other
+        jobs flying -- so a second split can run next to the first.
+        """
+        if not routes:
+            print(f"{label}: no bots to fly")
+            return
+        owned = sorted(routes)
+        ids = [i + 1 for i in owned]
+
+        if self.current_function["search"][0]:
+            self.stopAll()
+        self.detach_bots(ids, hand_over=True)
+
+        pos = self.vehicle.get_positions(
+            geoToCart=geoToCart,
+            origin=self.Variables.origin,
+            endDistance=self.Variables.endDistance,
+        )
+        for i in owned:
+            if 0 <= i < len(self.s.swarm) and i < len(pos):
+                bot = self.s.swarm[i]
+                bot.x, bot.y, bot.theta = pos[i]
+
+        if not self.goal_jobs:
+            # Nothing else is flying, so the plot can be rebuilt.
+            self.isToStop = False
+            self._reset_gui()
+            self.gui.show_env()
+            self.gui.show_bots()
+
+        for i in owned:
+            self._assign(i, routes[i])
+            xs, ys = zip(*self.assigned_seq[i])
+            self.gui.show_route([i], xs, ys)
+        self.gui.run()
+
+        stop_event = threading.Event()
+        job_ids = set(ids)  # shared with the worker, so bots can be detached
+        thread = Thread(
+            target=self._run_owned_job, args=(job_ids, owned, stop_event, label)
+        )
+        thread.start()
+        self.goal_jobs.append({"ids": job_ids, "thread": thread, "stop": stop_event})
+        self._sync_goal_slot()
+        print(
+            f"{label} thread started for bots {ids} -- running jobs: "
+            f"{[sorted(job['ids']) for job in self.goal_jobs]}"
+        )
+
     def goal(self, guided_circle_direction, guided_circle_radius, goal_latlon, ids):
         goal_latlon = [
             [x, y]
@@ -1040,7 +1568,9 @@ class Swarm:
         # in the swarm, so it can't coexist with a per-bot goal at all.
         if self.current_function["search"][0]:
             self.stopAll()
-        self.stop_goal_jobs(ids)
+        # Only the bots in this command leave their old job; the rest of
+        # that job keeps flying and a nearby bot takes over the leavers' work.
+        self.detach_bots(ids, hand_over=True)
 
         dropped = [i for i in ids if i in self.removed_bots]
         if dropped:
@@ -1117,84 +1647,14 @@ class Swarm:
                 )
                 self._assign(i, points)
 
-            while True:
-                # This job's OWN event, so stopping the goal for one set
-                # of bots leaves the others running. isToStop is still
-                # honoured: a full stop has to take everything.
-                if stop_event.is_set() or self.isToStop:
-                    print(f"Goal for bots {ids} stopped")
-                    self._clear_state(owned)
-                    break
-                sleep(self.Variables.tick_interval_s)
-                updates = {}
-                try:
-                    # Bots some OTHER job is flying: hands off. Snapping
-                    # them to their raw drone position below would drag
-                    # them back every tick and fight that job's guidance.
-                    busy = self._owned_indices()
-                    for i, b in enumerate(self.s.swarm):
-                        v_lat, v_lon = (
-                            self.vehicle.drones[i].location.global_relative_frame.lat,
-                            self.vehicle.drones[i].location.global_relative_frame.lon,
-                        )
-                        vx, vy = geoToCart(
-                            self.Variables.origin,
-                            self.Variables.endDistance,
-                            [v_lat, v_lon],
-                        )
-                        # rx, ry = (
-                        #     vx / 2,
-                        #     vy / 2,
-                        # )
-                        if not (i + 1) in ids:
-                            # Not ours. If nothing else is flying it either,
-                            # park its marker on the drone's live position so
-                            # the plot still tracks that aircraft.
-                            if i not in busy:
-                                b.x, b.y, b.theta = (
-                                    vx,
-                                    vy,
-                                    compass_to_math_rad(self.vehicle.drones[i].heading),
-                                )
-                            continue
-                        if (i + 1) in self.removed_bots:
-                            continue
-                        if (
-                            b.done
-                            and not self._claim_orphan_work(i)
-                            and not b.loitering
-                        ):
-                            if b.done:
-                                print(f"Bot: {i+1} is completed goal")
-                            continue
-
-                        # Bot advances its own line every tick regardless of vehicle
-                        # proximity -- it's the path planner here -- but arrival_gate
-                        # stops it handing off to the NEXT queued waypoint until the
-                        # real vehicle has also gotten near the current one, so sim
-                        # kinematics (much faster than real flight) can't run the
-                        # bot far ahead of where the vehicle actually is.
-                        x, y, theta = b.get_pose()
-
-                        tx, ty = self._guide_and_reposition(i, b, x, y, theta, vx, vy)
-                        updates[i] = (
-                            b.goal if b.goal_exists() else None,
-                            (vx, vy),
-                            (tx, ty),
-                        )
-                except Exception:
-                    # Thread.run() has no handler, so an exception here
-                    # would kill this job outright and the only sign
-                    # would be drones that quietly stop being commanded.
-                    print("ERROR in worker tick:")
-                    traceback.print_exc()
-                self._publish_state(updates)
+            self._run_owned_job(ids, owned, stop_event, "Goal")
 
         stop_event = threading.Event()
-        thread = Thread(target=goalSub, args=(goal_latlon, ids, stop_event))
+        job_ids = set(ids)  # shared with the worker, so bots can be detached
+        thread = Thread(target=goalSub, args=(goal_latlon, job_ids, stop_event))
         thread.start()
 
-        self.goal_jobs.append({"ids": set(ids), "thread": thread, "stop": stop_event})
+        self.goal_jobs.append({"ids": job_ids, "thread": thread, "stop": stop_event})
         self._sync_goal_slot()
         print(
             f"Goal thread started for bots {ids} -- running jobs: "
@@ -1226,12 +1686,10 @@ class Swarm:
             origin=self.Variables.origin,
             endDistance=self.Variables.endDistance,
         )
-        self._populate_sim(pos, len(self.vehicle.drones))
-        # _populate() rebuilds every bot unfrozen; re-freeze the removed
-        # ones so they don't read as active on the plot.
-        for i in range(len(self.s.swarm)):
-            if (i + 1) in self.removed_bots:
-                self.s.swarm[i].done = True
+        if len(self.s.swarm) != len(self.vehicle.drones):
+            # First command of the session. Only then: rebuilding the sim
+            # would wipe the bots other jobs are flying.
+            self._populate_sim(pos, len(self.vehicle.drones))
 
         # Hybrid swarm: each bot's own (vehicle-type-appropriate) cruise
         # speed, keyed by uav id -- lets AutoSplitMission give faster
@@ -1256,83 +1714,27 @@ class Swarm:
             grid_spacing=int(grid_space),
             coverage_area=int(coverage_area),
         )
-        print(split.filePath)
-        goal_sequences = wp.load_goals_for_swarm(split.filePath)
-        # zip against `active`, so sequence 0 goes to the first bot
-        # still in the swarm rather than to bot 1 by position.
-        for index, seq in zip(active, goal_sequences):
-            self._assign(index, seq)
-            # Newest route only: replaces this bot's previous route line.
-            xs, ys = zip(*seq)
-            self.gui.show_route([index], xs, ys)
 
-        self.gui.run()
-
-        def AutoSplitMissionSub():
-            while True:
-                # Break, but do NOT clear isToStop -- it's the shared
-                # signal every running function watches. Clearing it
-                # here would stop only whichever worker noticed first
-                # and leave the rest running. teardown() clears it,
-                # once all of them have exited.
-                if self.isToStop:
-                    print("Stopped Auto Mission")
-                    break
-                sleep(self.Variables.tick_interval_s)
-                updates = {}
-                try:
-                    for i, b in enumerate(self.s.swarm):
-                        if (i + 1) in self.removed_bots:
-                            continue
-                        if (
-                            b.done
-                            and not self._claim_orphan_work(i)
-                            and not b.loitering
-                        ):
-                            continue
-                        v_lat, v_lon = (
-                            self.vehicle.drones[i].location.global_relative_frame.lat,
-                            self.vehicle.drones[i].location.global_relative_frame.lon,
-                        )
-                        vx, vy = geoToCart(
-                            self.Variables.origin,
-                            self.Variables.endDistance,
-                            [v_lat, v_lon],
-                        )
-                        # rx, ry = (
-                        #     vx / 2,
-                        #     vy / 2,
-                        # )  # real vehicle's position in the bot's sim frame
-
-                        # Bot advances its own line every tick regardless of vehicle
-                        # proximity -- it's the path planner here -- but arrival_gate
-                        # stops it handing off to the NEXT queued waypoint until the
-                        # real vehicle has also gotten near the current one, so sim
-                        # kinematics (much faster than real flight) can't run the
-                        # bot far ahead of where the vehicle actually is.
-                        x, y, theta = b.get_pose()
-
-                        tx, ty = self._guide_and_reposition(i, b, x, y, theta, vx, vy)
-                        updates[i] = (
-                            b.goal if b.goal_exists() else None,
-                            (vx, vy),
-                            (tx, ty),
-                        )
-                except Exception:
-                    # Thread.run() has no handler, so an exception here
-                    # would kill this job outright and the only sign
-                    # would be drones that quietly stop being commanded.
-                    print("ERROR in worker tick:")
-                    traceback.print_exc()
-                self._publish_state(updates)
-
-        thread = Thread(target=AutoSplitMissionSub)
-        thread.start()
-
-        self.current_function["spilt"] = [True, thread]
+        # Every route file is named for the bot it was planned for
+        # (uav_<bot id>_path.csv): give each route to THAT bot, and fly
+        # them as one job that leaves every other job alone.
+        self._start_route_job(self._routes_by_bot(split, selected_uav_ids), "Auto split")
+        self._publish_plan("split", "Auto split", split.areas, split.plan)
 
     def SpecificSplit(self, center_lat_lon_array, uav_array, grid_space, coverage_area):
         print("Specific Split Mission")
+        # GroupSplitting wants one grid spacing and one coverage area per
+        # region. Live sends a single value for all of them, so repeat it.
+        n_areas = len(center_lat_lon_array)
+        if not isinstance(grid_space, (list, tuple)):
+            grid_space = [grid_space] * n_areas
+        if not isinstance(coverage_area, (list, tuple)):
+            coverage_area = [coverage_area] * n_areas
+        if len(grid_space) != n_areas or len(coverage_area) != n_areas:
+            raise ValueError(
+                f"specific split: {n_areas} region(s) but {len(grid_space)} grid "
+                f"spacing(s) and {len(coverage_area)} coverage area(s)"
+            )
         active = [
             i
             for i in range(len(self.vehicle.drones))
@@ -1356,11 +1758,10 @@ class Swarm:
             origin=self.Variables.origin,
             endDistance=self.Variables.endDistance,
         )
-        self._populate_sim(pos, len(self.vehicle.drones))
-
-        for i in range(len(self.s.swarm)):
-            if (i + 1) in self.removed_bots:
-                self.s.swarm[i].done = True
+        if len(self.s.swarm) != len(self.vehicle.drones):
+            # First command of the session. Only then: rebuilding the sim
+            # would wipe the bots other jobs are flying.
+            self._populate_sim(pos, len(self.vehicle.drones))
 
         # Hybrid swarm: each bot's own (vehicle-type-appropriate) cruise
         # speed, keyed by uav id -- uav_array is a list of per-area id
@@ -1389,71 +1790,8 @@ class Swarm:
             coverage_area=coverage_area,
         )
 
-        goal_sequences = wp.load_goals_for_swarm(split.filePaths)
-        # zip against `active`, so sequence 0 goes to the first bot
-        # still in the swarm rather than to bot 1 by position.
-        for index, seq in zip(active, goal_sequences):
-            self._assign(index, seq)
-            # Newest route only: replaces this bot's previous route line.
-            xs, ys = zip(*seq)
-            self.gui.show_route([index], xs, ys)
-
-        self.gui.run()
-
-        def SpecificSplitSub():
-            while True:
-                if self.isToStop:
-                    print("Stopped Auto Mission")
-                    break
-                sleep(self.Variables.tick_interval_s)
-                updates = {}
-                try:
-                    for i, b in enumerate(self.s.swarm):
-                        if (i + 1) in self.removed_bots:
-                            continue
-                        if (
-                            b.done
-                            and not self._claim_orphan_work(i)
-                            and not b.loitering
-                        ):
-                            continue
-                        v_lat, v_lon = (
-                            self.vehicle.drones[i].location.global_relative_frame.lat,
-                            self.vehicle.drones[i].location.global_relative_frame.lon,
-                        )
-                        vx, vy = geoToCart(
-                            self.Variables.origin,
-                            self.Variables.endDistance,
-                            [v_lat, v_lon],
-                        )
-                        # rx, ry = (
-                        #     vx / 2,
-                        #     vy / 2,
-                        # )  # real vehicle's position in the bot's sim frame
-
-                        # Bot advances its own line every tick regardless of vehicle
-                        # proximity -- it's the path planner here -- but arrival_gate
-                        # stops it handing off to the NEXT queued waypoint until the
-                        # real vehicle has also gotten near the current one, so sim
-                        # kinematics (much faster than real flight) can't run the
-                        # bot far ahead of where the vehicle actually is.
-                        x, y, theta = b.get_pose()
-
-                        tx, ty = self._guide_and_reposition(i, b, x, y, theta, vx, vy)
-                        updates[i] = (
-                            b.goal if b.goal_exists() else None,
-                            (vx, vy),
-                            (tx, ty),
-                        )
-                except Exception:
-                    # Thread.run() has no handler, so an exception here
-                    # would kill this job outright and the only sign
-                    # would be drones that quietly stop being commanded.
-                    print("ERROR in worker tick:")
-                    traceback.print_exc()
-                self._publish_state(updates)
-
-        thread = Thread(target=SpecificSplitSub)
-        thread.start()
-
-        self.current_function["spilt"] = [True, thread]
+        # Route files are named for the bot they were planned for, so each
+        # route goes to THAT bot; bots outside this split are not touched.
+        flat_ids = [uav_id for group in uav_array for uav_id in group]
+        self._start_route_job(self._routes_by_bot(split, flat_ids), "Specific split")
+        self._publish_plan("split", "Specific split", split.areas, split.plan)

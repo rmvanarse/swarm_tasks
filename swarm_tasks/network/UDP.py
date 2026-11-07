@@ -18,22 +18,53 @@ class CallBack:
     sent relative to how long main.py takes to process one.
     """
 
+    # A command may end with "|id=<token>"; the token is echoed in every reply.
+    ID_MARK = "|id="
+
     def __init__(self):
         self._queue = queue.Queue()
+        self._sock = None  # set by attach(); used only to send replies
+        self._current = (None, None)  # (addr, command id) of the command in hand
+
+    def attach(self, receiver):
+        """Lets replies go out of the same socket the commands arrive on."""
+        self._sock = receiver.socket
+
+    def _reply(self, addr, text):
+        if self._sock is None or addr is None:
+            return
+        try:
+            self._sock.sendto(text.encode("utf-8"), addr)
+        except OSError as exc:
+            print(f"[UDP] reply to {addr} failed: {exc!r}")
 
     def call_back(self, data, addr):
-        self._queue.put(data.decode())
+        text, _, cmd_id = data.decode().partition(self.ID_MARK)
+        self._queue.put((text, addr, cmd_id or None))
+        if cmd_id:
+            self._reply(addr, f"ACK {cmd_id} received")
 
     def get_current_data(self):
         try:
-            return self._queue.get_nowait()
+            text, addr, cmd_id = self._queue.get_nowait()
         except queue.Empty:
             return None
+        self._current = (addr, cmd_id)
+        return text
 
-    def set_data(self):
-        """No-op: get_current_data() already dequeued the message, so
-        there's nothing left to clear. Kept only so main.py's existing
-        callBack.set_data() call sites don't need to change."""
+    def set_data(self, error=None):
+        """Finishes the command get_current_data() handed out and tells the
+        sender how it went: "ACK <id> accepted", or "REJECT <id> <reason>"
+        when `error` is given. Commands sent without an id get no reply."""
+        addr, cmd_id = self._current
+        self._current = (None, None)
+        if not cmd_id:
+            return
+        if error is None:
+            self._reply(addr, f"ACK {cmd_id} accepted")
+        else:
+            reason = " ".join(str(error).split()) or "rejected"
+            self._reply(addr, f"REJECT {cmd_id} {reason}")
 
 class UDPReceiverHandler(socketserver.BaseRequestHandler):
     """Handles each incoming UDP packet by delegating to the server's callback."""

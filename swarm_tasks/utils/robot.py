@@ -55,9 +55,13 @@ class Bot:
         verbose=False,
     ):
 
-        # MAVLink system id of the drone this bot stands for. Set by Swarm
-        # after the bot is built (None for a bot with no real drone behind it).
-        self.sysid = None
+        # Two different ids, both set by Swarm after the bot is built:
+        #   id     -- the bot's own id: its 1-based position in the swarm
+        #             (bot 1 is the drone with the lowest system id)
+        #   sys_id -- MAVLink system id of the drone this bot stands for
+        # Both are None for a bot with no real drone behind it.
+        self.id = None
+        self.sys_id = None
 
         # Basic attributes
         self.x = x
@@ -79,6 +83,14 @@ class Bot:
             self.max_turn_speed = turn_rate_from_bank(bank_angle_deg, speed)  # rad/s
         else:
             self.max_turn_speed = max_turn_speed
+
+        # Copters/ground bots only. accel_limit (m/s^2) makes the bot speed
+        # up, brake and change direction no faster than the real drone can,
+        # by moving it along a velocity vector that changes by at most
+        # accel_limit per second. None = off (jump straight to the command).
+        # Swarm sets it each tick from the drone's WPNAV_ACCEL.
+        self.accel_limit = None
+        self.vel = (0.0, 0.0)  # current velocity, m/s (used with accel_limit)
 
         if verbose:
             print("New bot spawned at: (" + str(x) + "," + str(y) + ")")
@@ -316,7 +328,9 @@ class Bot:
     def step(self, distance):
         x_ = self.x + distance * np.cos(self.theta)
         y_ = self.y + distance * np.sin(self.theta)
+        self._try_move_to(x_, y_)
 
+    def _try_move_to(self, x_, y_):
         if self.sim.check_free(
             x_, y_, self.size + 0.01, ignore=self
         ) or not self.sim.check_free(self.x, self.y, self.size - 0.01, ignore=self):
@@ -411,7 +425,30 @@ class Bot:
             self.turn(turn_angle)
             # Can slow to a stop/hover, but never commanded backwards
             cmd_speed = np.clip(speed, 0.0, self.max_speed)
+            if self.accel_limit:
+                self._move_with_acceleration(cmd_speed)
+                return
         self.step(cmd_speed * self.step_size)
+
+    def _move_with_acceleration(self, cmd_speed):
+        """Copter motion with a bounded acceleration: the velocity moves
+        toward (cmd_speed along the heading) by at most accel_limit * dt per
+        tick, and the bot travels along that velocity. So a new goal does not
+        make the bot jump to full speed, and a reversal first brakes through
+        zero, just like the real drone has to."""
+        dt = self.step_size
+        target = np.array(
+            [cmd_speed * np.cos(self.theta), cmd_speed * np.sin(self.theta)]
+        )
+        vel = np.array(self.vel, dtype=float)
+        dv = target - vel
+        max_dv = self.accel_limit * dt
+        norm = float(np.linalg.norm(dv))
+        if norm > max_dv:
+            dv *= max_dv / norm
+        vel = vel + dv
+        self.vel = (float(vel[0]), float(vel[1]))
+        self._try_move_to(self.x + vel[0] * dt, self.y + vel[1] * dt)
 
     def unstuck(self, r):
         """
@@ -426,6 +463,8 @@ class Bot:
         self.sim = sim
 
     def set_goal(self, x, y):
+        if self.done:
+            self.vel = (0.0, 0.0)  # was standing still; start from rest
         self.goal = (x, y)
         self.goal_given = True
         self.loitering = (
@@ -489,7 +528,7 @@ class Bot:
         if self.goal_queue:
             nxt = self.goal_queue.pop(0)
             self.set_goal(*nxt)
-            print(f"robot goal set to {nxt} bot id: {self.sysid}")
+            print(f"robot goal set to {nxt} bot id: {self.id} (sys_id {self.sys_id})")
             return False
         self.done = True
         return True

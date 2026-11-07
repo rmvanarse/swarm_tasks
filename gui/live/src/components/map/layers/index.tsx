@@ -6,6 +6,8 @@ import { LayerType } from '~/model/layers';
 import { BaseLayer, BaseLayerSettings } from './base';
 import { GraticuleLayer } from './graticule';
 import type { LayerProps } from './MapLayers';
+import { SwarmPlanLayer, SwarmPlanLayerSettings } from './swarm-plan';
+import { TerrainLayer, TerrainLayerSettings } from './terrain';
 import { TileServerLayer, TileServerLayerSettings } from './tile-server';
 export { MapLayers, type LayerConfig } from './MapLayers';
 
@@ -22,6 +24,8 @@ export const UnavailableLayerSettings = () => (
 
 export const layerSettingsComponents = {
   [LayerType.BASE]: BaseLayerSettings,
+  [LayerType.SWARM_PLAN]: SwarmPlanLayerSettings,
+  [LayerType.TERRAIN]: TerrainLayerSettings,
   [LayerType.TILE_SERVER]: TileServerLayerSettings,
   [LayerType.UNAVAILABLE]: UnavailableLayerSettings,
 };
@@ -31,5 +35,7 @@ export const layerComponents: Partial<
 > = {
   [LayerType.BASE]: BaseLayer as React.ComponentType<LayerProps>,
   [LayerType.GRATICULE]: GraticuleLayer,
+  [LayerType.SWARM_PLAN]: SwarmPlanLayer as React.ComponentType<LayerProps>,
+  [LayerType.TERRAIN]: TerrainLayer as React.ComponentType<LayerProps>,
   [LayerType.TILE_SERVER]: TileServerLayer,
 };

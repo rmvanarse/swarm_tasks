@@ -91,6 +91,7 @@ from .enums import (
     RebootShutdownConditions,
     SkybrushUserCommand,
 )
+from .errors import UnknownFlightModeError
 from .ftp import MAVFTP
 from .log_download import MAVLinkLogDownloader
 from .packets import (
@@ -870,7 +871,9 @@ class MAVLinkDriver(UAVDriver["MAVLinkUAV"]):
         # a fixed-wing. Copters have no such mode and fall back to Loiter.
         try:
             await uav.set_mode("qloiter", channel=channel)
-        except ValueError:
+        except (ValueError, UnknownFlightModeError):
+            # ArduCopter has no "qloiter": the name lookup raises
+            # UnknownFlightModeError (not a ValueError), so catch both.
             await uav.set_mode("loiter", channel=channel)
 
     async def _send_landing_signal_broadcast(self, *, transport=None) -> None:
@@ -1603,12 +1606,18 @@ class MAVLinkUAV(UAVBase[MAVLinkDriver]):
 
         lat, lon = int(target.lat * 1e7), int(target.lon * 1e7)
 
+        # ArduPilot denies DO_REPOSITION unless the vehicle is already in a
+        # guided mode, or bit 0 of the flags (MAV_DO_REPOSITION_FLAGS_CHANGE_MODE)
+        # allows it to switch to Guided itself. A quadplane sitting in QLoiter
+        # or Loiter would otherwise ignore "fly to here".
+        flags = 1 if isinstance(self._autopilot, ArduPilot) else 0
+
         success = await self.driver.send_command_int(
             self,
             MAVCommand.DO_REPOSITION,
             frame=MAVFrame.GLOBAL_INT,
             param1=-1,  # speed (default)
-            param2=0,  # flags
+            param2=flags,  # flags
             param3=0,  # reserved
             param4=nan,  # yaw mode
             x=lat,  # latitude

@@ -1,6 +1,7 @@
 import csv, os, sys
 import simplekml
 from geopy.distance import distance
+from swarm_tasks.mission.plan_record import strip_record
 from geopy.point import Point
 from swarm_tasks.utils.locatePosition import geoToCart, cartToGeo
 from utils import mission_dir
@@ -35,6 +36,10 @@ class SpecificSplitMission:
         self.path = []
         self.waypoints = []
         self.filePaths = []
+        # {uav id: strip + sweep lines}, filled while the grids are made
+        self.plan = {}
+        # [{center, size_m, ids}] one entry per area, filled the same way
+        self.areas = []
 
     def _grid_csv(self, uav_id):
         return os.path.join(self.mission_dir, f"uav_{uav_id}_grid.csv")
@@ -76,6 +81,13 @@ class SpecificSplitMission:
         grid_spacing = grid_space
         meters_for_extended_lines = 250
         full_width, full_height = coverage_area, coverage_area
+        self.areas.append(
+            {
+                "center": [center_lat, center_lon],
+                "size_m": float(coverage_area),
+                "ids": list(uav_ids),
+            }
+        )
 
         strip_heights = self._strip_heights(uav_ids, full_height)
 
@@ -98,6 +110,7 @@ class SpecificSplitMission:
             kml = simplekml.Kml()
 
             csv_data = []
+            sweeps = []
 
             current_lat = bottom.latitude
             line_number = 0
@@ -111,6 +124,12 @@ class SpecificSplitMission:
                 line_number += 1
                 current_point = Point(current_lat, west_edge.longitude)
                 east_point = distance(meters=full_width).destination(current_point, 90)
+                sweeps.append(
+                    (
+                        (current_point.latitude, current_point.longitude),
+                        (east_point.latitude, east_point.longitude),
+                    )
+                )
                 if line_number % 2 == 1:
                     csv_data.append((current_point.latitude, current_point.longitude))
                     csv_data.append((east_point.latitude, east_point.longitude))
@@ -184,6 +203,7 @@ class SpecificSplitMission:
                 )
 
             uav_id = uav_ids[i]
+            self.plan[uav_id] = strip_record(bottom, top, west_edge, full_width, sweeps)
             kml.save(self._grid_kml(uav_id))
             xy = []
             for data in csv_data:

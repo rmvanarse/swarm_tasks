@@ -23,6 +23,26 @@ schema = {
             ),
             "default": {},
         },
+        "terrain_warnings": {
+            "type": "boolean",
+            "title": "Warn about terrain",
+            "description": (
+                "After a goal, search or split is accepted, check its route or "
+                "area against the terrain extension's data and warn in Live if "
+                "drones would fly too close to the ground. Needs the terrain "
+                "extension and main.py's config panel (telemetry_port)."
+            ),
+            "default": True,
+        },
+        "telemetry_port": {
+            "type": "number",
+            "title": "main.py config panel port",
+            "description": (
+                "Port of main.py's config panel on command_host. Its telemetry "
+                "tells the server the height each drone is set to fly at."
+            ),
+            "default": 8765,
+        },
         "default_guided_circle_direction": {
             "type": "number",
             "title": "Default guided-circle direction",

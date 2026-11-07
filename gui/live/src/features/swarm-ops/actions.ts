@@ -9,6 +9,7 @@
  * mavlink extension, swarm operations from this message.
  */
 
+import { showError } from '~/features/snackbar/actions';
 import { getUAVIdList } from '~/features/uavs/selectors';
 import messageHub from '~/message-hub';
 import store from '~/store';
@@ -39,8 +40,10 @@ function createSwarmCommandSender(
       uavIds,
       isBroadcast: false,
       skipConfirmation,
+      // sendSwarmMessage shows its own error toast with main.py's reason.
+      reportFailure: false,
       run: async () => {
-        const outcome = await sendSwarmMessage(command, uavIds, kwds);
+        const outcome = await sendSwarmMessage(command, name, uavIds, kwds);
         const outcomes: Outcomes = {};
         for (const id of uavIds) {
           outcomes[id] = outcome;
@@ -53,20 +56,29 @@ function createSwarmCommandSender(
 
 async function sendSwarmMessage(
   command: string,
+  name: string,
   uavIds: string[],
   kwds: Record<string, unknown>
 ): Promise<'success' | 'failure'> {
   try {
-    // A negative acknowledgement from the server rejects this promise.
-    await messageHub.sendMessage({
+    // The server answers only after main.py has accepted or rejected the
+    // command, so a NAK here carries main.py's own reason.
+    const response: any = await messageHub.sendMessage({
       type: 'X-SWARM-CMD',
       command,
       uavIds,
       kwds,
     });
+    if (response?.body?.type === 'ACK-NAK') {
+      showError(`${name} rejected: ${response.body.reason || 'unknown reason'}`);
+      return 'failure';
+    }
+
     return 'success';
   } catch (error) {
     console.error(`Swarm command ${command} failed`, error);
+    const reason = error instanceof Error ? error.message : String(error);
+    showError(`${name} rejected: ${reason}`);
     return 'failure';
   }
 }

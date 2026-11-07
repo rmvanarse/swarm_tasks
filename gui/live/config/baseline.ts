@@ -92,6 +92,7 @@ const baseline: Config = {
       { id: 'graticule', type: LayerType.GRATICULE, label: 'Graticule' },
       { id: 'beacons', type: LayerType.BEACONS, label: 'Beacons' },
       { id: 'features', type: LayerType.FEATURES, label: 'Features' },
+      { id: 'swarmPlan', type: LayerType.SWARM_PLAN, label: 'Search plan' },
       { id: 'home', type: LayerType.MISSION_INFO, label: 'Mission info' },
       { id: 'uavs', type: LayerType.UAVS, label: 'UAVs' },
     ],

@@ -301,6 +301,11 @@ export const supportsVirtualDrones =
 export const supportsMapCaching = makeSupportsFeatureSelector('map_cache');
 
 /**
+ * Returns whether the server we are connected to has terrain (elevation) data.
+ */
+export const supportsTerrain = makeSupportsFeatureSelector('terrain');
+
+/**
  * Returns whether the server we are connected to supports studio operations.
  */
 export const supportsStudioInterop = makeSupportsFeatureSelector('studio');

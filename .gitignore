@@ -19,3 +19,5 @@ build/
 .venv-wsl/
 gui/skybrush-server/src/flockwave/server/ext/map_cache.zip
 .claude/settings.local.json
+
+release/

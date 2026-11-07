@@ -2,6 +2,7 @@ import numpy as np
 import csv, os, sys
 import simplekml
 from geopy.distance import distance
+from swarm_tasks.mission.plan_record import strip_record
 from geopy.point import Point
 from swarm_tasks.utils.locatePosition import geoToCart, cartToGeo
 from utils import mission_dir
@@ -59,6 +60,8 @@ class BezierCurveMultiple:
         self.waypoints = []
         self.grid_path = []
         self.sample_points = []
+        # {drone number (1-based, in swarm order): strip + sweep lines}
+        self.plan = {}
 
     def _grid_csv(self, drone_num):
         return os.path.join(self.mission_dir, f"drone_{drone_num}_grid.csv")
@@ -124,6 +127,7 @@ class BezierCurveMultiple:
             kml = simplekml.Kml()
 
             csv_data = []
+            sweeps = []
 
             current_lat = bottom.latitude
             line_number = 0
@@ -137,6 +141,12 @@ class BezierCurveMultiple:
                 line_number += 1
                 current_point = Point(current_lat, west_edge.longitude)
                 east_point = distance(meters=full_width).destination(current_point, 90)
+                sweeps.append(
+                    (
+                        (current_point.latitude, current_point.longitude),
+                        (east_point.latitude, east_point.longitude),
+                    )
+                )
                 if line_number % 2 == 1:
                     csv_data.append((current_point.latitude, current_point.longitude))
                     csv_data.append((east_point.latitude, east_point.longitude))
@@ -209,6 +219,7 @@ class BezierCurveMultiple:
                     distance(meters=grid_spacing).destination(current_point, 0).latitude
                 )
             kml.save(self._grid_kml(i + 1))
+            self.plan[i + 1] = strip_record(bottom, top, west_edge, full_width, sweeps)
             csv_datas.append(csv_data)
 
         minimum_waypoints = len(min(csv_datas, key=len))

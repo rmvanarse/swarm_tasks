@@ -135,6 +135,25 @@ def vehicle_waypoint_radius_m(vehicle, vtype):
     )
 
 
+def vehicle_accel_m_s2(vehicle, vtype):
+    """This copter's own horizontal acceleration limit (m/s^2), read from
+    WPNAV_ACCEL (cm/s^2 on ArduCopter). It is how hard the real copter can
+    speed up, brake and change direction in Guided mode, so the simulated
+    bot is held to the same limit and cannot outrun the drone.
+
+    None for fixed-wing/quadplane (not used there), or when the parameter
+    is missing or outside a sane range.
+    """
+    if vtype == "fixedwing":
+        return None
+    try:
+        raw = vehicle.parameters.get("WPNAV_ACCEL")
+        accel = float(raw) / 100.0 if raw is not None else None
+    except Exception:
+        return None
+    return accel if _plausible(accel, 0.2, 20.0) else None
+
+
 _MIN_PLAUSIBLE_BANK_DEG = 5.0
 _MAX_PLAUSIBLE_BANK_DEG = 75.0
 
@@ -200,6 +219,8 @@ class Vehicles:
         self.speeds = [None] * len(conn_str)
         self.radii = [None] * len(conn_str)
         self.bank_angles = [None] * len(conn_str)
+        # Copter acceleration limit (m/s^2) from WPNAV_ACCEL, else None.
+        self.accels = [None] * len(conn_str)
         self.system_ids = []
         self.connect_all()
 
@@ -256,26 +277,53 @@ class Vehicles:
         # drones; the sysid<->bot-id translation lives in bot_id_for_sysid()
         # / sysid_for_bot_id() below.
         paired = [
-            (drone, vtype, speed, radius, bank)
-            for drone, vtype, speed, radius, bank in zip(
+            (drone, vtype, speed, radius, bank, accel)
+            for drone, vtype, speed, radius, bank, accel in zip(
                 self.drones,
                 self.vehicle_types,
                 self.speeds,
                 self.radii,
                 self.bank_angles,
+                self.accels,
             )
             if drone is not None
         ]
         paired.sort(key=lambda p: drone_system_id(p[0]))
-        self.drones = [drone for drone, _, _, _, _ in paired]
-        self.vehicle_types = [vtype for _, vtype, _, _, _ in paired]
-        self.speeds = [speed for _, _, speed, _, _ in paired]
-        self.radii = [radius for _, _, _, radius, _ in paired]
-        self.bank_angles = [bank for _, _, _, _, bank in paired]
+        self.drones = [p[0] for p in paired]
+        self.vehicle_types = [p[1] for p in paired]
+        self.speeds = [p[2] for p in paired]
+        self.radii = [p[3] for p in paired]
+        self.bank_angles = [p[4] for p in paired]
+        self.accels = [p[5] for p in paired]
         self.system_ids = [drone_system_id(drone) for drone in self.drones]
 
         connected = len(self.drones)
         print(f"Number of Drones Connected: {connected}/{len(self.conn_str)}")
+        self._report_id_mapping()
+
+    def _report_id_mapping(self):
+        """Prints bot id -> drone system id and warns if it is not the plain
+        bot N = system id N the GUI expects (bot 1 on system id 1, ...)."""
+        for bot_id, sys_id in enumerate(self.system_ids, start=1):
+            print(f"  bot {bot_id} -> drone system id {sys_id}")
+
+        duplicates = sorted(
+            {s for s in self.system_ids if self.system_ids.count(s) > 1}
+        )
+        if duplicates:
+            print(
+                f"WARNING: more than one drone has system id(s) {duplicates} -- "
+                f"give every drone a unique SYSID_THISMAV or commands will "
+                f"reach the wrong drone"
+            )
+        expected = list(range(1, len(self.system_ids) + 1))
+        if self.system_ids != expected:
+            print(
+                f"WARNING: drone system ids are {self.system_ids}, not "
+                f"{expected}: bot N is NOT system id N (a drone is missing or "
+                f"numbered differently). Commands still go to the right drone "
+                f"because ids are translated."
+            )
 
     def _connect_one(self, index, conn_string):
         try:
@@ -292,10 +340,12 @@ class Vehicles:
             self.speeds[index] = speed
             self.radii[index] = radius
             self.bank_angles[index] = bank
+            accel = vehicle_accel_m_s2(vehicle, vtype)
+            self.accels[index] = accel
             print(
                 f"Drone {index} connected ({conn_string}) -- "
                 f"detected vehicle_type={vtype} speed={speed} radius={radius} "
-                f"bank_angle_deg={bank}"
+                f"bank_angle_deg={bank} accel_m_s2={accel}"
             )
         except APIException:
             print(f"Drone {index} failed: no heartbeat ({conn_string})")

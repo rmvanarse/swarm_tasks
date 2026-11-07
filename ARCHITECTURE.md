@@ -45,7 +45,13 @@ flowchart LR
   server `mavlink` extension → drone.
 - **Swarm commands**: Live sends one `X-SWARM-CMD` message → `swarm_bridge`
   builds the exact text string `main.py` expects → one UDP datagram to
-  `command_host:command_port`. Fire-and-forget; `main.py` never replies.
+  `command_host:command_port`. The datagram is tagged `|id=<token>`, and
+  `main.py` replies to the sender with `ACK <id> received` at once, then
+  `ACK <id> accepted` or `REJECT <id> <reason>` once it has parsed and started
+  the command. The bridge waits for that (1.5 s for receipt, 20 s for the
+  verdict) and answers Live, which shows a rejection or a missing reply as an
+  error toast. A command without the `|id=` tag (for example from
+  `send_command_example.py`) still works and gets no reply.
 
 ## UAV ids
 
@@ -156,6 +162,34 @@ goal, search and split.
 - **Only some drones connected to `main.py`**: its startup line
   `Number of Drones Connected: X/Y` shows failed connections; bot ids follow
   connection order.
+
+## Terrain
+
+The server's `terrain` extension (`ext/terrain/`) holds ground elevation (NASA
+SRTM, 30 m, one `.hgt` file per 1 degree square) and everything else uses it:
+
+- **Map overlay.** `GET /terrain/tiles/<z>/<x>/<y>.png?style=hillshade|relief`
+  draws shaded relief. In Live, add a **Terrain** layer (Layers dialog); its
+  settings set the style and opacity and have a "Download this area" button.
+- **Drones.** ArduPilot asks the ground station for terrain with
+  `TERRAIN_REQUEST`; `ext/mavlink/terrain.py` answers with `TERRAIN_DATA`
+  blocks (layout from ArduPilot's `AP_Terrain`). Blocks with no known height
+  are skipped, never sent as zero.
+- **Warnings** (shown as warning toasts in Live; nothing is blocked):
+  - A drone below `min_clearance_m` (30 m) above the ground, now or within
+    `lookahead_s` (10 s) at its current velocity (`ext/terrain/clearance.py`).
+  - After a goal, search, split or specific split is accepted, the route or
+    area is checked at each drone's set height (`swarm_bridge/terrain_check.py`).
+    Heights come from `main.py`'s `/api/telemetry` (`height`, metres above
+    home); home altitude is the drone's altitude above sea level minus its
+    altitude above home.
+- **Offline.** Tiles are downloaded on first use and kept in the server's cache
+  folder (`.../Cache/ext/terrain`). `prefetch_areas` in `swarm.jsonc` downloads
+  chosen areas at start; `POST /terrain/prefetch {"lat","lon","radius_km"}` does
+  it on demand. Ocean tiles do not exist at the source and read as 0 m.
+
+Other routes: `GET /terrain/elevation?lat=&lon=`, `POST /terrain/profile`,
+`GET /terrain/stats`, `GET /terrain/warnings`.
 
 ## Drone-show code
 

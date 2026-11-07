@@ -47,7 +47,7 @@ import { bindSelectors } from './subscriptions';
 const persistConfig = {
   key: 'flockwave-client',
   storage: window.bridge ? window.bridge.createStateStore() : localForage,
-  version: 3,
+  version: 5,
   migrate: migrations,
   stateReconciler: defaultStateReconciler,
 

@@ -48,6 +48,7 @@ from .rssi import RSSIMode
 from .rtk import RTKCorrectionPacketEncoder
 from .signing import MAVLinkSigningConfiguration
 from .takeoff import MAVLinkScheduledTakeoffManager
+from .terrain import TerrainResponder
 from .time import MAVLinkTimeAxisConfigurationManager
 from .types import (
     MAVLinkMessage,
@@ -242,6 +243,7 @@ class MAVLinkNetwork:
 
         self.log = None  # type: ignore
         self._matchers = None  # type: ignore
+        self._terrain_responder: TerrainResponder | None = None
 
         self._id = id
         self._id_formatter = id_formatter
@@ -449,6 +451,12 @@ class MAVLinkNetwork:
                 nursery.start_soon(self._led_light_configuration_manager.run)
                 nursery.start_soon(self._time_axis_configuration_manager.run)
 
+                # Answers the drones' terrain requests with data from the
+                # terrain extension (if it is loaded)
+                self._terrain_responder = TerrainResponder(
+                    driver.app, driver, nursery, log
+                )
+
                 # Start the communication manager
                 try:
                     await manager.run(
@@ -458,6 +466,7 @@ class MAVLinkNetwork:
                         tasks=[self._generate_heartbeats],
                     )
                 finally:
+                    self._terrain_responder = None
                     for matcher in matchers.values():
                         for _, _, future in matcher:
                             future.cancel()
@@ -807,6 +816,8 @@ class MAVLinkNetwork:
             "SCALED_IMU3": self._handle_message_scaled_imu,  # common handler for all IMUs
             "STATUSTEXT": self._handle_message_statustext,
             "SYS_STATUS": self._handle_message_sys_status,
+            "TERRAIN_REPORT": nop,
+            "TERRAIN_REQUEST": self._handle_message_terrain_request,
             "TIMESYNC": self._handle_message_timesync,
             "V2_EXTENSION": self._handle_message_v2_extension,
             "VFR_HUD": self._handle_message_vfr_hud,
@@ -1043,6 +1054,15 @@ class MAVLinkNetwork:
         uav = self._find_uav_from_message(message, address)
         if uav:
             uav.handle_message_sys_status(message)
+
+    def _handle_message_terrain_request(
+        self, message: MAVLinkMessage, *, connection_id: str, address: Any
+    ):
+        """Handles an incoming MAVLink TERRAIN_REQUEST message: the drone is
+        missing terrain data around its position and asks us for it."""
+        uav = self._find_uav_from_message(message, address)
+        if uav and self._terrain_responder is not None:
+            self._terrain_responder.handle_request(uav, message)
 
     def _handle_message_timesync(
         self, message: MAVLinkMessage, *, connection_id: str, address: Any
